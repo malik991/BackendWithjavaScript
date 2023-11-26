@@ -1,9 +1,9 @@
 // this is a wrapper which utilized for connection with DB
 
-// -------- 2nd approach , with prmises handler, high order funciton ----
+// -------- 2nd approach , with promises handler, high order funciton ----
 
-const asyncHandler = async (requestHandler) => {
-  (req, res, next) => {
+const asyncHandler = (requestHandler) => {
+  return (req, res, next) => {
     Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
   };
 };
@@ -15,7 +15,7 @@ const asyncHandler = async (requestHandler) => {
 // const asyncHandler = (requestHandler) => async (req, res, next) => {
 //   try {
 //     // now we will execute the functon which we take
-//     await requestHandler(req, res, next);
+//     return await requestHandler(req, res, next);
 //   } catch (error) {
 //     // if user send the code than show it
 //     res.status(error.code || 500).json({
@@ -25,5 +25,4 @@ const asyncHandler = async (requestHandler) => {
 //     });
 //   }
 // };
-
 export { asyncHandler };

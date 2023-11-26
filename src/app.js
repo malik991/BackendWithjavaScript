@@ -23,5 +23,14 @@ app.use(express.static("public"));
 // crud operation on cookies scurly from just server side on the browser of client
 app.use(cookieParser());
 
+// all middlware will import first than get router
+// router imports
+import userRouter from "./routes/user.router.js";
+
+// routes declration , now we use middleware instead of app.get/post , coz we declrae our router separatly
+app.use("/api/v1/users", userRouter);
+
+//http://localhost:8000/api/v1/users/register or login
+
 // just another way like default
 export { app };

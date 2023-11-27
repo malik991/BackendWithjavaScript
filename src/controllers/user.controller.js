@@ -6,6 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   // 1: get the values from form
+  //console.log("req . body: ", req.body);
   const { userName, email, password, fullName } = req.body;
   //console.log("email: ", email);
   // 2: neccessary checks if null or empty
@@ -15,21 +16,32 @@ const registerUser = asyncHandler(async (req, res) => {
   ) {
     // now when some return true, throw message to client
     throw new ApiErrorHandler(400, "All fields are required");
-  } else if (!email.includes("@")) {
-    throw new ApiErrorHandler(400, " @ is missing in email");
+  } else if (email) {
+    if (!email.includes("@")) {
+      throw new ApiErrorHandler(400, " @ is missing in email");
+    }
   }
   // 3: check user already exists ?
 
   // -- in mongoose model provide the us the direct contect with DB
-  const userExist = User.findOne({
+  const userExist = await User.findOne({
     // with $ sign it provide us the logical operator to query to mongo DB
     $or: [{ email }, { userName }],
   });
-  if (userExist) {
-    if (userExist.email === email) {
+  if (
+    userExist &&
+    (userExist.email === email.toLowerCase() ||
+      userExist.userName === userName.toLowerCase())
+  ) {
+    //console.log(`DB ${userExist.userName} and postman: ${userName}`);
+    if (userExist.email === email.toLowerCase()) {
       throw new ApiErrorHandler(409, "Email already Exist!");
-    } else if (userExist.userName === userName) {
-      throw new ApiErrorHandler(409, "User Name is already exist!");
+    }
+    if (userExist.userName === userName.toLowerCase()) {
+      throw new ApiErrorHandler(
+        409,
+        "User Name is already exist Do not use Uppercase Letter!"
+      );
     }
   }
   // 4: (images will upload to cloudniary and get URL from cloudinary and check avatar again)
@@ -37,14 +49,28 @@ const registerUser = asyncHandler(async (req, res) => {
   // --- cus we inject our middleware multer in routes , so like req.body give us some
   // ---- function by express, so multer provide us req.files , access of all files from req objec
   const avatarLocalfilePath = req.files?.avatar[0]?.path;
-  const coverImgLocalPath = req.files?.coverImage[0]?.path;
+  //const coverImgLocalPath = req.files?.coverImage[0]?.path; JS issue
   if (!avatarLocalfilePath) {
     throw new ApiErrorHandler(400, "Avatar is mendatory!");
+  }
+  //console.log("multer provides: ", req.files);
+  //we check req.files by classical way
+  let coverImgLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImgLocalPath = req.files.coverImage[0].path;
+    console.log("cover image path", coverImgLocalPath);
   }
   const cloudinaryAvatarUrl = await uploadOnCloudinary(avatarLocalfilePath);
   const cloudinaryCoverImgUrl = await uploadOnCloudinary(coverImgLocalPath);
   if (!cloudinaryAvatarUrl) {
-    throw new ApiErrorHandler(500, "Avatar is not uploaded on Cloudinary");
+    throw new ApiErrorHandler(
+      500,
+      "Avatar is not uploaded on Cloudinary, Try again plz."
+    );
   }
   //------------------------------------------------------------------- ///
 
@@ -57,8 +83,8 @@ const registerUser = asyncHandler(async (req, res) => {
     avatar: cloudinaryAvatarUrl.url,
     coverImage: cloudinaryCoverImgUrl?.url || "", // check for cover image
   });
-  // check user is created ot not if yes than use select method to minus the password
-  // in select methos - mean no need, for other property use " " (space) and write
+  // check user is created or not if yes than use select method to minus the password
+  // in select methods -(-ve) mean no need, for other property use " " (space) and write
   const checkUserCreated = await User.findById(newUser._id).select(
     "-password -refreshToken"
   );
@@ -81,7 +107,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // ---------------------------------------------- ///
   // just for testing of api on postman
   /*   res.status(200).json({
-    message: "Hello world 😊",
+    message: "Hello world ",
   }); */
 });
 

@@ -61,14 +61,14 @@ userSchema.pre("save", async function (next) {
   // if password not modifeid so just return next();
   if (!this.isModified("password")) return next();
   // otherwise password modified than execute and encrypt the password
-  this.passsword = await bcrypt.hash(this.passsword, 10);
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 // define custome method to check the password from user
 userSchema.methods.isPasswordCorrect = async function (userEneterPassword) {
   // here methods has also power to get the property of schemas by "this"
-  return await bcrypt.compare(userEneterPassword, this.passsword);
+  return await bcrypt.compare(userEneterPassword, this.password);
 };
 
 // define methods from mongoose schema for access and refrsh tokan

@@ -128,4 +128,88 @@ const registerUser = asyncHandler(async (req, res) => {
   }); */
 });
 
-export { registerUser };
+// login user
+
+const loginUser = asyncHandler(async (req, res) => {
+  const { emailOrUserName, password } = req.body;
+  if ([emailOrUserName, password].some((field) => field?.trim() === "")) {
+    // now when some return true, throw message to client
+    throw new ApiErrorHandler(400, "All fields are required");
+  }
+
+  // check user exist
+  const userExist = await User.findOne({
+    $or: [
+      { email: emailOrUserName.toLowerCase() },
+      { userName: emailOrUserName.toLowerCase() },
+    ],
+  });
+  if (userExist) {
+    const isPasswordOk = await userExist.isPasswordCorrect(password);
+    if (isPasswordOk) {
+      req.session.userId = userExist._id;
+      req.session.username = userExist.userName;
+
+      return res.status(201).json(
+        new ApiResponce(
+          200,
+          {
+            userId: userExist._id,
+            username: userExist.userName,
+            FullName: userExist.fullName,
+          },
+          "Login successfullt.😊"
+        )
+      );
+    } else {
+      return res
+        .status(401)
+        .json(
+          new ApiResponce(
+            401,
+            null,
+            `Hello ${req.body.emailOrUserName}: your password not correct.🙄`
+          )
+        );
+    }
+  } else {
+    return res
+      .status(401)
+      .json(new ApiResponce(401, null, "user name or email does not exit"));
+  }
+});
+
+// check user
+const checkUserProfile = asyncHandler(async (req, res) => {
+  const userid = req.session.userId;
+  const userName = req.session.username;
+  if (userid) {
+    return res.status(200).json(
+      new ApiResponce(
+        200,
+        {
+          userid,
+          userName,
+        },
+        "huraah 😁"
+      )
+    );
+  } else {
+    return res.status(401).json(new ApiResponce(401, null, "hi hi hi"));
+  }
+});
+
+const logoutUser = (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.log("error in logout server: ", err);
+      throw new ApiErrorHandler(500, "Error in server");
+    }
+    // clear the session cookie on client side
+    res.clearCookie("connect.sid");
+    return res
+      .status(200)
+      .json(new ApiResponce(200, null, "Logout Succesfully 😊"));
+  });
+};
+export { registerUser, loginUser, checkUserProfile, logoutUser };

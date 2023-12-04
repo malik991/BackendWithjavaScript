@@ -1,6 +1,12 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import {
+  registerUser,
+  loginUser,
+  checkUserProfile,
+  logoutUser,
+} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { Protect } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -19,5 +25,11 @@ router.route("/register").post(
   ]),
   registerUser
 );
+
+router.route("/login").post(upload.none(), loginUser);
+
+// check protected route with session
+router.route("/profile").get(Protect, checkUserProfile);
+router.route("/logout").get(logoutUser);
 
 export default router;

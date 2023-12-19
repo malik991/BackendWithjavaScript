@@ -4,6 +4,7 @@ import {
   loginUser,
   checkUserProfile,
   logoutUser,
+  getRefreshAccessToken,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -30,6 +31,8 @@ router.route("/login").post(upload.none(), loginUser);
 
 // secured routes with token
 router.route("/logout").get(verifyJWT, logoutUser);
+router.route("/newtoken").post(getRefreshAccessToken);
+
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);
 

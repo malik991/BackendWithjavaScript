@@ -1,3 +1,4 @@
+import { set } from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
@@ -5,6 +6,29 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import fs from "fs";
 
+// access and refresh tokan into db
+const generateAccessAndRefreshToken = async (userID) => {
+  try {
+    // access token provide to use while refresh token store in DB
+    // to make easy for user do not enter password again and again while session expire
+    const getUserById = await User.findById(userID);
+    const accessToken = getUserById.generateAccessToken();
+    const refreshToken = getUserById.generateRefreshToken();
+    // insert into db refresh token
+    getUserById.refreshToken = refreshToken;
+    await getUserById.save({ validateBeforeSave: false }); // while save execute mendotry field will be kickin so prevent it.
+
+    // now return both tokens
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiErrorHandler(
+      500,
+      "something went wrong while generate access and refresh token"
+    );
+  }
+};
+
+// register user
 const registerUser = asyncHandler(async (req, res) => {
   // 1: get the values from form
   //console.log("req . body: ", req.body);
@@ -133,7 +157,6 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { emailOrUserName, password } = req.body;
   if ([emailOrUserName, password].some((field) => field?.trim() === "")) {
-    // now when some return true, throw message to client
     throw new ApiErrorHandler(400, "All fields are required");
   }
 
@@ -144,23 +167,59 @@ const loginUser = asyncHandler(async (req, res) => {
       { userName: emailOrUserName.toLowerCase() },
     ],
   });
+  //console.log(userExist);
   if (userExist) {
     const isPasswordOk = await userExist.isPasswordCorrect(password);
     if (isPasswordOk) {
-      req.session.userId = userExist._id;
-      req.session.username = userExist.userName;
+      // req.session.userId = userExist._id;
+      // req.session.username = userExist.userName
 
-      return res.status(201).json(
-        new ApiResponce(
-          200,
-          {
-            userId: userExist._id,
-            username: userExist.userName,
-            FullName: userExist.fullName,
-          },
-          "Login successfullt.😊"
-        )
+      // call token method
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+        userExist._id
       );
+      // now update the userExist obj with refresh token
+      userExist.refreshToken = refreshToken; // instead of calling DB.
+
+      // fields which do not send to the user(-password and refershtoken)
+      const loggedInUser = {
+        _id: userExist._id,
+        userName: userExist.userName,
+        email: userExist.email,
+        fullName: userExist.fullName,
+        avatar: userExist.avatar,
+        coverImage: userExist.coverImage,
+        watchHistory: userExist.watchHistory,
+        createdAt: userExist.createdAt,
+        updatedAt: userExist.updatedAt,
+      };
+
+      // now send these tokens into cookies, design an object for cookies
+      // to make cookie secure, now just server side modify the cookies
+      const options = {
+        httpOnly: true,
+        secure: true,
+      };
+
+      return res
+        .status(201)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+          new ApiResponce(
+            200,
+            {
+              user: loggedInUser,
+              accessToken,
+              refreshToken,
+              ////////////////////////////////////
+              // userId: userExist._id,
+              // username: userExist.userName,
+              // FullName: userExist.fullName,
+            },
+            "Login successfullt.😊"
+          )
+        );
     } else {
       return res
         .status(401)
@@ -199,8 +258,35 @@ const checkUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-const logoutUser = (req, res) => {
-  req.session.destroy((err) => {
+const logoutUser = asyncHandler(async (req, res) => {
+  if (req.user._id) {
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        // use mongo db operator, and del the refresh token
+        $set: {
+          refreshToken: undefined,
+        },
+      },
+      {
+        // in this way we get new updated value instead of old , so refresh token wil be undefined
+        new: true,
+      }
+    );
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    return res
+      .status(200)
+      .clearCookie("accessToken", options)
+      .clearCookie("refreshToken", options)
+      .json(new ApiResponce(201, {}, "Successfully logout😊"));
+  } else {
+    throw new ApiErrorHandler(401, "user not found in logout");
+  }
+
+  /*  req.session.destroy((err) => {
     if (err) {
       console.log("error in logout server: ", err);
       throw new ApiErrorHandler(500, "Error in server");
@@ -210,6 +296,6 @@ const logoutUser = (req, res) => {
     return res
       .status(200)
       .json(new ApiResponce(200, null, "Logout Succesfully 😊"));
-  });
-};
+  }); */
+});
 export { registerUser, loginUser, checkUserProfile, logoutUser };

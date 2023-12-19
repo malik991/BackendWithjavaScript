@@ -6,7 +6,7 @@ import {
   logoutUser,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
-import { Protect } from "../middlewares/auth.middleware.js";
+import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -28,8 +28,9 @@ router.route("/register").post(
 
 router.route("/login").post(upload.none(), loginUser);
 
+// secured routes with token
+router.route("/logout").get(verifyJWT, logoutUser);
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);
-router.route("/logout").get(logoutUser);
 
 export default router;

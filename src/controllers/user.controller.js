@@ -338,10 +338,165 @@ const getRefreshAccessToken = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(401, error?.message || "Refresh Token failed");
   }
 });
+
+// update password endpoint
+const updatePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!(oldPassword || newPassword)) {
+    throw new ApiErrorHandler(401, "Old and New Password are required");
+  }
+  try {
+    const user = await User.findById(req.user?._id);
+    const isPasswordOk = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordOk) {
+      throw new ApiErrorHandler(401, "password is incorrect");
+    }
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+    res.status(200).json(new ApiResponce(200, {}, "Password Updated 😊"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      401,
+      error?.message || "Error while update password"
+    );
+  }
+});
+
+// get currentUser endpoint
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const fetchUser = req?.user;
+  if (!fetchUser) {
+    throw new ApiErrorHandler(401, "user not exist or logged in");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponce(200, req.user, "Fetched user successfully 😊"));
+});
+
+// update user infos
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { userName, email, fullName } = req.body;
+  const userId = req.user?._id;
+  if ([userName, email, fullName].some((field) => field?.trim() === "")) {
+    throw new ApiErrorHandler(401, "All fields are required");
+  }
+  if (!userId) {
+    throw new ApiErrorHandler(404, "user not found");
+  }
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          userName,
+          email,
+          fullName,
+        },
+      },
+      { new: true }
+    ).select("-password");
+    return res
+      .status(200)
+      .json(new ApiResponce(201, user, "Details updated successfully 😊"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      401,
+      error?.message || "Error while user details update"
+    );
+  }
+});
+
+const updateAvatar = asyncHandler(async (req, res) => {
+  if (!req.files || Object.keys(req.files).length === 0) {
+    throw new ApiErrorHandler(401, "please upload the avatar");
+  }
+  const localAvatarPath = req.files?.avatar[0].path; // file comes from multer in routes file
+  //console.log("local path: ", localAvatarPath);
+  const userId = req.user?._id;
+
+  if (!localAvatarPath) {
+    throw new ApiErrorHandler(401, "avatar file is missing");
+  }
+  if (!userId) {
+    throw new ApiErrorHandler(401, "invalid request for avatar update");
+  }
+  const cloudinaryObj = await uploadOnCloudinary(localAvatarPath);
+  if (!cloudinaryObj.url) {
+    throw new ApiErrorHandler(400, "Error while uploading avatar!");
+  }
+  if (localAvatarPath && fs.existsSync(localAvatarPath)) {
+    fs.unlinkSync(localAvatarPath);
+  }
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        avatar: cloudinaryObj.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+  return res
+    .status(200)
+    .json(new ApiResponce(201, user, "Avatar image successfully updated 😊"));
+});
+
+// cover image
+const updateCoverImage = asyncHandler(async (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      throw new ApiErrorHandler(401, "please select the cover image");
+    }
+    const localCoverImagePath = req.files?.coverImage[0].path; // file comes from multer in routes file
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new ApiErrorHandler(401, "invalid request for accounts update");
+    }
+    if (!localCoverImagePath) {
+      throw new ApiErrorHandler(401, "CoverImage file is missing");
+    }
+    const cloudinaryObj = await uploadOnCloudinary(localCoverImagePath);
+    if (!cloudinaryObj.url) {
+      throw new ApiErrorHandler(400, "Error while uploading CoverImage!");
+    }
+    if (localCoverImagePath && fs.existsSync(localCoverImagePath)) {
+      console.log("enter in local path");
+      fs.unlinkSync(localCoverImagePath);
+    }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          coverImage: cloudinaryObj.url,
+        },
+      },
+      {
+        new: true,
+      }
+    ).select("-password");
+    return res
+      .status(200)
+      .json(new ApiResponce(201, user, "Cover image successfully updated 😊"));
+  } catch (error) {
+    console.log("Error in updatecoverImage endPoint", error);
+    // Forward the error to the global error handler
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error.message || "Internal server error"
+    );
+  }
+});
 export {
   registerUser,
   loginUser,
   checkUserProfile,
   logoutUser,
   getRefreshAccessToken,
+  updatePassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateAvatar,
+  updateCoverImage,
 };

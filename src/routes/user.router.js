@@ -5,6 +5,11 @@ import {
   checkUserProfile,
   logoutUser,
   getRefreshAccessToken,
+  updatePassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateAvatar,
+  updateCoverImage,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -31,7 +36,32 @@ router.route("/login").post(upload.none(), loginUser);
 
 // secured routes with token
 router.route("/logout").get(verifyJWT, logoutUser);
-router.route("/newtoken").post(getRefreshAccessToken);
+router.route("/new-token").post(getRefreshAccessToken);
+router.route("/change-password").post(upload.none(), verifyJWT, updatePassword);
+router.route("/current-user").post(upload.none(), verifyJWT, getCurrentUser);
+router
+  .route("/update-account-details")
+  .post(upload.none(), verifyJWT, updateAccountDetails);
+router.route("/update-avatar").post(
+  upload.fields([
+    {
+      name: "avatar",
+      maxCount: 1,
+    },
+  ]),
+  verifyJWT,
+  updateAvatar
+);
+router.route("/update-cover-image").post(
+  upload.fields([
+    {
+      name: "coverImage",
+      maxCount: 1,
+    },
+  ]),
+  verifyJWT,
+  updateCoverImage
+);
 
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);

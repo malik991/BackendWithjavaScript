@@ -377,13 +377,15 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { userName, email, fullName } = req.body;
   const userId = req.user?._id;
-  if ([userName, email, fullName].some((field) => field?.trim() === "")) {
+  if (!(userName && email && fullName)) {
     throw new ApiErrorHandler(401, "All fields are required");
   }
+
   if (!userId) {
     throw new ApiErrorHandler(404, "user not found");
   }
   try {
+    //console.log("userName: ", userName);
     const user = await User.findByIdAndUpdate(
       userId,
       {
@@ -407,10 +409,11 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateAvatar = asyncHandler(async (req, res) => {
-  if (!req.files || Object.keys(req.files).length === 0) {
+  if (!req.file || Object.keys(req.file).length === 0) {
     throw new ApiErrorHandler(401, "please upload the avatar");
   }
-  const localAvatarPath = req.files?.avatar[0].path; // file comes from multer in routes file
+  //const localAvatarPath = req.file?.avatar[0].path; // file comes from multer in routes file
+  const localAvatarPath = req.file?.path;
   //console.log("local path: ", localAvatarPath);
   const userId = req.user?._id;
 
@@ -446,10 +449,10 @@ const updateAvatar = asyncHandler(async (req, res) => {
 // cover image
 const updateCoverImage = asyncHandler(async (req, res) => {
   try {
-    if (!req.files || Object.keys(req.files).length === 0) {
+    if (!req.file || Object.keys(req.file).length === 0) {
       throw new ApiErrorHandler(401, "please select the cover image");
     }
-    const localCoverImagePath = req.files?.coverImage[0].path; // file comes from multer in routes file
+    const localCoverImagePath = req.file?.path; // file comes from multer in routes file
     const userId = req.user?._id;
     if (!userId) {
       throw new ApiErrorHandler(401, "invalid request for accounts update");

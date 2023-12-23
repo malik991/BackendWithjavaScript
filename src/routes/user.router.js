@@ -38,30 +38,16 @@ router.route("/login").post(upload.none(), loginUser);
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
 router.route("/change-password").post(upload.none(), verifyJWT, updatePassword);
-router.route("/current-user").post(upload.none(), verifyJWT, getCurrentUser);
+router.route("/current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/update-account-details")
-  .post(upload.none(), verifyJWT, updateAccountDetails);
-router.route("/update-avatar").post(
-  upload.fields([
-    {
-      name: "avatar",
-      maxCount: 1,
-    },
-  ]),
-  verifyJWT,
-  updateAvatar
-);
-router.route("/update-cover-image").post(
-  upload.fields([
-    {
-      name: "coverImage",
-      maxCount: 1,
-    },
-  ]),
-  verifyJWT,
-  updateCoverImage
-);
+  .patch(upload.none(), verifyJWT, updateAccountDetails);
+router
+  .route("/update-avatar")
+  .patch(verifyJWT, upload.single("avatar"), updateAvatar);
+router
+  .route("/update-cover-image")
+  .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
 
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);

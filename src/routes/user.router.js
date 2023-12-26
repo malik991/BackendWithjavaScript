@@ -10,6 +10,8 @@ import {
   updateAccountDetails,
   updateAvatar,
   updateCoverImage,
+  getChannelProfile,
+  getWatchHistory,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -48,6 +50,8 @@ router
 router
   .route("/update-cover-image")
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
+router.route("/c/:username").get(verifyJWT, getChannelProfile);
+router.route("/watch-history").get(verifyJWT, getWatchHistory);
 
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);

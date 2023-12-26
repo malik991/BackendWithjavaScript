@@ -44,4 +44,4 @@ const videoSchema = new mongoose.Schema(
 // plugin is just a hook like pre hook for schema from mongoose
 videoSchema.plugin(mongooseAggregate);
 
-export const Videos = mongoose.model("Videos", videoSchema);
+export const Video = mongoose.model("Video", videoSchema);

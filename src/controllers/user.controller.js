@@ -1,4 +1,4 @@
-import { set } from "mongoose";
+import mongoose, { set } from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
@@ -491,6 +491,152 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     );
   }
 });
+
+const getChannelProfile = asyncHandler(async (req, res) => {
+  // get the channel name or user from URL
+  const { channelOrUserName } = req.params;
+  console.log(channelOrUserName);
+  if (!channelOrUserName?.trim()) {
+    throw new ApiErrorHandler(404, "username in url does not exist");
+  }
+  // here we use aggregate to match the all docs related to this channel
+  const channel = await User.aggregate([
+    {
+      $match: {
+        userName: channelOrUserName?.toLowerCase(),
+      },
+    },
+    {
+      // get the total subscribers
+      $lookup: {
+        from: "subscriptions", // coz in DB model name is small and plural
+        localField: "_id",
+        foreignField: "channel", // by channel we get the total docs or subscriber
+        as: "subscribers",
+      },
+    },
+    {
+      // Find out subscribed To
+      $lookup: {
+        from: "subscriptions", // coz in DB model name is small and plural
+        localField: "_id",
+        foreignField: "subscriber", // by subscriber we get the this channel subscribed To
+        as: "subscribedTo",
+      },
+    },
+    {
+      // now we will count the subscribers
+      $addFields: {
+        SubscriberCount: {
+          // $size use for count the total documents
+          $size: "$subscribers", // here $subscribers is a field which use above "as"
+        },
+        channelSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscriber: {
+          // here we check logged in user is subscriber or not in if condition aggregate
+          // then use for true and else for false
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] }, // if you are already logged in, there will be a user with _id, and look into $subscribers.subscriber
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      // now use $project, which projection the data which we need to send to the frontEnd
+      $project: {
+        fullName: 1,
+        userName: 1,
+        SubscriberCount: 1,
+        channelSubscribedToCount: 1,
+        isSubscriber: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
+  console.log("channel return type: ", channel);
+  // in aggregation return type is an array
+  if (!channel?.length) {
+    throw new ApiErrorHandler(404, "channel does not exists");
+  }
+  // now return the 0th value of channel just an object of an array
+  return res
+    .status(200)
+    .json(new ApiResponce(200, channel[0], "channel fetched successfully 😊"));
+});
+
+// get watch hostory
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // in mongoose when we wrote req.user._id it provide us the mongoDB ID in a string
+  // but in aggregate we need to convert orignal objecId into normal string
+  // coz in aggregate we can't use mongoose
+  const user = await User.aggregate([
+    {
+      $match: {
+        // like this , now we get the user ID
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          // this is a nested pipline to find out user data in videos model
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner", // now again use sub-pipline, coz owner have all fields of users so minus some field
+              pipeline: [
+                {
+                  // now this all data is present in owner field, instead of in main video docs
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            // now data in Owner field but in form of array and we need [0] value, so just formate it in good way
+            $addFields: {
+              // now get the data from owner field at first position
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+  if (!user?.length) {
+    throw new ApiErrorHandler(404, "watch history not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponce(
+        200,
+        user[0].watchHistory,
+        "watch history fetched successfully 😊"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -502,4 +648,6 @@ export {
   updateAccountDetails,
   updateAvatar,
   updateCoverImage,
+  getChannelProfile,
+  getWatchHistory,
 };

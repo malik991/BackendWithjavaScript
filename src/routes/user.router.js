@@ -13,6 +13,10 @@ import {
   getChannelProfile,
   getWatchHistory,
 } from "../controllers/user.controller.js";
+import {
+  uploadVideo,
+  updateTitleAndDescription,
+} from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -37,20 +41,37 @@ router.route("/register").post(
 router.route("/login").post(upload.none(), loginUser);
 
 // secured routes with token
+router.route("/upload-video").post(
+  verifyJWT,
+  upload.fields([
+    {
+      name: "videoFile",
+      maxCount: 1,
+    },
+    {
+      name: "thumbNail",
+      maxCount: 1,
+    },
+  ]),
+  uploadVideo
+);
+router
+  .route("/update-title-description/:videoId")
+  .patch(verifyJWT, upload.none(), updateTitleAndDescription);
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
-router.route("/change-password").post(upload.none(), verifyJWT, updatePassword);
+router.route("/change-password").post(verifyJWT, upload.none(), updatePassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/update-account-details")
-  .patch(upload.none(), verifyJWT, updateAccountDetails);
+  .patch(verifyJWT, upload.none(), updateAccountDetails);
 router
   .route("/update-avatar")
   .patch(verifyJWT, upload.single("avatar"), updateAvatar);
 router
   .route("/update-cover-image")
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
-router.route("/c/:username").get(verifyJWT, getChannelProfile);
+router.route("/c/:channelOrUserName").get(verifyJWT, getChannelProfile);
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
 
 // check protected route with session

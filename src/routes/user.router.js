@@ -16,6 +16,9 @@ import {
 import {
   uploadVideo,
   updateTitleAndDescription,
+  updateThumbNail,
+  getAllVideos,
+  userSpecificVideos,
 } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -39,7 +42,7 @@ router.route("/register").post(
 );
 
 router.route("/login").post(upload.none(), loginUser);
-
+router.route("/get-all-videos").get(getAllVideos);
 // secured routes with token
 router.route("/upload-video").post(
   verifyJWT,
@@ -58,6 +61,10 @@ router.route("/upload-video").post(
 router
   .route("/update-title-description/:videoId")
   .patch(verifyJWT, upload.none(), updateTitleAndDescription);
+router
+  .route("/update-thumbnail/:videoId")
+  .patch(verifyJWT, upload.single("thumbNail"), updateThumbNail);
+router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
 router.route("/change-password").post(verifyJWT, upload.none(), updatePassword);

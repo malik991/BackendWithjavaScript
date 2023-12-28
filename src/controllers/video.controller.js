@@ -95,11 +95,55 @@ const uploadVideo = asyncHandler(async (req, res) => {
   }
 });
 
+const getAllVideos = asyncHandler(async (req, res) => {
+  // hit query to videos collections and get all videos documents
+  try {
+    const getVideos = await Video.find(
+      {},
+      "videoFile thumbNail title duration views owner"
+    );
+    if (!getVideos || getVideos.length === 0) {
+      throw new ApiErrorHandler(404, "No video found");
+    }
+    res.status(200).json(new ApiResponce(200, getVideos, "all videos Fetched"));
+  } catch (error) {
+    console.log("Error in GetAllVideos ::", error?.message);
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error in getAll videos"
+    );
+  }
+});
+
+const userSpecificVideos = asyncHandler(async (req, res) => {
+  // get user Id
+  // check userId present and valid
+  // query to db for specific user id records/docs in videos collection
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new ApiErrorHandler(404, "User is not authorized or login");
+  }
+  try {
+    const userVideos = await Video.find({ owner: userId });
+    if (!userVideos || userVideos.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponce(200, userVideos, "user do not have any video"));
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, userVideos, "videos fetched sucessfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error in get user videos"
+    );
+  }
+});
+
 const updateTitleAndDescription = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   const { videoId } = req.params;
-  console.log("req param", req.params);
-  console.log("video id: ", videoId);
   if (!title || !description) {
     throw new ApiErrorHandler(
       404,
@@ -125,10 +169,8 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
         new: true,
       }
     );
-    console.log("updated video: ", updatedVideo);
-    // if (!updatedVideo?.length) {
-    //   throw new ApiErrorHandler(404, "video not found");
-    // }
+    //console.log("updated video: ", updatedVideo);
+
     return res
       .status(200)
       .json(
@@ -147,7 +189,54 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
 });
 
 const updateThumbNail = asyncHandler(async (req, res) => {
-  req.file?.thumbNail[0].path;
+  try {
+    if (!req.file || Object.keys(req.file).length === 0) {
+      throw new ApiErrorHandler(404, "please select the thumb nail picture");
+    }
+    var localPathThumbNail = req.file?.path;
+    if (!localPathThumbNail) {
+      throw new ApiErrorHandler(400, "error in local path of thumbnail");
+    }
+    const { videoId } = req.params;
+    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+      throw new ApiErrorHandler(404, "Video Id is not valid");
+    }
+    const cloudniaryThumbNailUpdate =
+      await uploadOnCloudinary(localPathThumbNail);
+    if (!cloudniaryThumbNailUpdate) {
+      throw new ApiErrorHandler(
+        500,
+        "Error while updating the Thumbnail on cloudinary"
+      );
+    }
+    const updatedVideoObj = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $set: {
+          thumbNail: cloudniaryThumbNailUpdate.url,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+    res
+      .status(200)
+      .json(
+        new ApiResponce(200, updatedVideoObj, "ThumbNail successfully updated")
+      );
+  } finally {
+    if (localPathThumbNail && fs.existsSync(localPathThumbNail)) {
+      console.log("enter in finally if condition");
+      fs.unlinkSync(localPathThumbNail);
+    }
+  }
 });
 
-export { uploadVideo, updateThumbNail, updateTitleAndDescription };
+export {
+  uploadVideo,
+  updateThumbNail,
+  updateTitleAndDescription,
+  getAllVideos,
+  userSpecificVideos,
+};

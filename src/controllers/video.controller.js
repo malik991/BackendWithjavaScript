@@ -62,10 +62,15 @@ const uploadVideo = asyncHandler(async (req, res) => {
       typeof cloudinaryVideoUrl.duration === "string"
         ? parseFloat(cloudinaryVideoUrl.duration)
         : cloudinaryVideoUrl.duration;
+
+    const VideoPublicId = cloudinaryVideoUrl?.public_id;
+    const ThumbNailPublicId = cloudinaryThumbnailUrl?.public_id;
     // create a new document in video collection
     const newVideo = await Video.create({
       videoFile: cloudinaryVideoUrl.url,
       thumbNail: cloudinaryThumbnailUrl.url,
+      VideoPublicId,
+      ThumbNailPublicId,
       owner: new mongoose.Types.ObjectId(req.user?._id),
       title: title,
       description,

@@ -11,6 +11,14 @@ const videoSchema = new mongoose.Schema(
       type: String, // cloudiner URL
       required: true,
     },
+    VideoPublicId: {
+      type: String, // cloudinary public_id
+      required: true,
+    },
+    ThumbNailPublicId: {
+      type: String, // cloudinary public_id
+      required: true,
+    },
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",

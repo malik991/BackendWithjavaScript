@@ -98,14 +98,19 @@ const uploadVideo = asyncHandler(async (req, res) => {
 const updateTitleAndDescription = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   const { videoId } = req.params;
+  console.log("req param", req.params);
+  console.log("video id: ", videoId);
   if (!title || !description) {
     throw new ApiErrorHandler(
       404,
       "title and descriptions are mendatory fields"
     );
   }
-  if (!videoId) {
-    throw new ApiErrorHandler(404, "video not found");
+  if (!videoId || typeof videoId !== "string" || videoId.trim() === "") {
+    throw new ApiErrorHandler(404, "video id empty or undefined");
+  }
+  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(400, "Invalid videoId");
   }
   try {
     const updatedVideo = await Video.findByIdAndUpdate(
@@ -120,6 +125,10 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
         new: true,
       }
     );
+    console.log("updated video: ", updatedVideo);
+    // if (!updatedVideo?.length) {
+    //   throw new ApiErrorHandler(404, "video not found");
+    // }
     return res
       .status(200)
       .json(

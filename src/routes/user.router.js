@@ -19,6 +19,7 @@ import {
   updateThumbNail,
   getAllVideos,
   userSpecificVideos,
+  deleteVideo,
 } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -65,6 +66,8 @@ router
   .route("/update-thumbnail/:videoId")
   .patch(verifyJWT, upload.single("thumbNail"), updateThumbNail);
 router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
+router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo);
+/// users routes
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
 router.route("/change-password").post(verifyJWT, upload.none(), updatePassword);

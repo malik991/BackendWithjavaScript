@@ -233,10 +233,51 @@ const updateThumbNail = asyncHandler(async (req, res) => {
   }
 });
 
+const deleteVideo = asyncHandler(async (req, res) => {
+  // get user Id
+  // get video id which needs to be delted
+  // get all user docs from video collection
+  // find and delte the video/doc from user collection
+  // retunr responce updated collection
+  const userId = req.user?._id;
+  const { videoId } = req.params;
+
+  if (!userId) {
+    throw new ApiErrorHandler(400, "user not found");
+  }
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "video id is invalid");
+  }
+  try {
+    // check if the user video exist or not
+    const userVideo = await Video.findOne({ _id: videoId, owner: userId });
+    if (!userVideo || userVideo.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponce(404, null, "video not found or Unauthorized"));
+    }
+    // delte the video
+    await Video.deleteOne({ _id: videoId, owner: userId });
+
+    // get refreshed collection of videos
+    const userAllvideos = await Video.find({ owner: userId });
+    return res
+      .status(200)
+      .json(new ApiResponce(200, userAllvideos, "Video deleted Successfully"));
+    //const deleteVideo = userAllvideos.
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error"
+    );
+  }
+});
+
 export {
   uploadVideo,
   updateThumbNail,
   updateTitleAndDescription,
   getAllVideos,
   userSpecificVideos,
+  deleteVideo,
 };

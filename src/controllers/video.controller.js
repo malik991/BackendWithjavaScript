@@ -209,6 +209,23 @@ const updateThumbNail = asyncHandler(async (req, res) => {
     if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
       throw new ApiErrorHandler(404, "Video Id is not valid");
     }
+    const result = await Video.findById(videoId);
+    if (!result || result.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponce(200, result, "video not found"));
+    }
+    const { deleteImageResponse } = await deleteFromCloudinary([
+      result.ThumbNailPublicId,
+    ]);
+    if (!deleteImageResponse) {
+      throw new ApiErrorHandler(
+        "500",
+        "Problem while delteing file from cloudinary, please try again"
+      );
+    }
+    console.log("thumbNial deletion response: ", deleteImageResponse);
+
     const cloudniaryThumbNailUpdate =
       await uploadOnCloudinary(localPathThumbNail);
     if (!cloudniaryThumbNailUpdate) {
@@ -222,6 +239,7 @@ const updateThumbNail = asyncHandler(async (req, res) => {
       {
         $set: {
           thumbNail: cloudniaryThumbNailUpdate.url,
+          ThumbNailPublicId: cloudniaryThumbNailUpdate.public_id,
         },
       },
       {
@@ -276,8 +294,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
         "Problem while delteing file from cloudinary, please try again"
       );
     }
-    console.log("Video deletion response: ", deleteVideoResponse);
-    console.log("Image deletion response: ", deleteImageResponse);
+    //console.log("Video deletion response: ", deleteVideoResponse);
+    //console.log("Image deletion response: ", deleteImageResponse);
     // delte the video
     await Video.deleteOne({ _id: videoId, owner: userId });
 

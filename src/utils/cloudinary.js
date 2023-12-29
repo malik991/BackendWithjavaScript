@@ -31,4 +31,36 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+// Add a function to delete a file from Cloudinary
+const deleteFromCloudinary = async (publicIds) => {
+  try {
+    if (!publicIds || publicIds.length === 0) return "Public IDs not provided";
+    //console.log("publicIds: ", publicIds);
+    // Delete the multiple asset from Cloudinary
+    // Delete video assets
+    const deleteVideoResponse = await cloudinary.api.delete_resources(
+      publicIds,
+      {
+        type: "upload",
+        resource_type: "video",
+      }
+    );
+
+    // Delete image assets
+    const deleteImageResponse = await cloudinary.api.delete_resources(
+      publicIds,
+      {
+        type: "upload",
+        resource_type: "image",
+      }
+    );
+
+    // Return the Cloudinary response
+    return { deleteVideoResponse, deleteImageResponse };
+  } catch (error) {
+    console.log("Error deleting from Cloudinary:", error);
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };

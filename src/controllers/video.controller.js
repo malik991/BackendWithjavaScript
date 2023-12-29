@@ -2,7 +2,10 @@ import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import fs from "fs";
 
@@ -261,6 +264,20 @@ const deleteVideo = asyncHandler(async (req, res) => {
         .status(404)
         .json(new ApiResponce(404, null, "video not found or Unauthorized"));
     }
+    // Call the delete function for Cloudinary
+    const { deleteVideoResponse, deleteImageResponse } =
+      await deleteFromCloudinary([
+        userVideo.VideoPublicId,
+        userVideo.ThumbNailPublicId,
+      ]);
+    if (!deleteVideoResponse || !deleteImageResponse) {
+      throw new ApiErrorHandler(
+        "500",
+        "Problem while delteing file from cloudinary, please try again"
+      );
+    }
+    console.log("Video deletion response: ", deleteVideoResponse);
+    console.log("Image deletion response: ", deleteImageResponse);
     // delte the video
     await Video.deleteOne({ _id: videoId, owner: userId });
 

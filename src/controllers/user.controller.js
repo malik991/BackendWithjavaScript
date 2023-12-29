@@ -3,7 +3,10 @@ import { User } from "../models/user.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 
@@ -123,6 +126,8 @@ const registerUser = asyncHandler(async (req, res) => {
       fullName,
       avatar: cloudinaryAvatarUrl.url,
       coverImage: cloudinaryCoverImgUrl?.url || "", // check for cover image
+      avatarPublicId: cloudinaryAvatarUrl?.public_id || "",
+      coverImagePublicId: cloudinaryCoverImgUrl?.public_id || "",
     });
     //  when user create mnogo db send back all entries in responce , so remove pwd and refresh tokan
     // check user is created or not if yes than use select method to minus the password
@@ -423,6 +428,22 @@ const updateAvatar = asyncHandler(async (req, res) => {
   if (!userId) {
     throw new ApiErrorHandler(401, "invalid request for avatar update");
   }
+  // get user data from db
+  // delete old avatar
+  const result = await User.findById(userId);
+  if (!result || result.length === 0) {
+    throw new ApiErrorHandler(404, "user not found");
+  }
+  const { deleteImageResponse } = await deleteFromCloudinary([
+    result.avatarPublicId,
+  ]);
+  if (!deleteImageResponse) {
+    throw new ApiErrorHandler(
+      "500",
+      "Problem while delteing avatar from cloudinary, please try again"
+    );
+  }
+  console.log("thumbNial deletion response: ", deleteImageResponse);
   const cloudinaryObj = await uploadOnCloudinary(localAvatarPath);
   if (!cloudinaryObj.url) {
     throw new ApiErrorHandler(400, "Error while uploading avatar!");
@@ -435,6 +456,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
     {
       $set: {
         avatar: cloudinaryObj.url,
+        avatarPublicId: cloudinaryObj.public_id,
       },
     },
     {

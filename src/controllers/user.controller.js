@@ -443,7 +443,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
       "Problem while delteing avatar from cloudinary, please try again"
     );
   }
-  console.log("thumbNial deletion response: ", deleteImageResponse);
+  //console.log("thumbNial deletion response: ", deleteImageResponse);
   const cloudinaryObj = await uploadOnCloudinary(localAvatarPath);
   if (!cloudinaryObj.url) {
     throw new ApiErrorHandler(400, "Error while uploading avatar!");
@@ -482,6 +482,22 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     if (!localCoverImagePath) {
       throw new ApiErrorHandler(401, "CoverImage file is missing");
     }
+    const result = await User.findById(userId);
+    if (!result || result.length === 0) {
+      throw new ApiErrorHandler(
+        404,
+        "user not exist while updating cover image."
+      );
+    }
+    const { deleteImageResponse } = await deleteFromCloudinary([
+      result.coverImagePublicId,
+    ]);
+    if (!deleteImageResponse) {
+      throw new ApiErrorHandler(
+        "500",
+        "Problem while deleteing cover from cloudinary, please try again"
+      );
+    }
     const cloudinaryObj = await uploadOnCloudinary(localCoverImagePath);
     if (!cloudinaryObj.url) {
       throw new ApiErrorHandler(400, "Error while uploading CoverImage!");
@@ -495,6 +511,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
       {
         $set: {
           coverImage: cloudinaryObj.url,
+          coverImagePublicId: cloudinaryObj.public_id,
         },
       },
       {

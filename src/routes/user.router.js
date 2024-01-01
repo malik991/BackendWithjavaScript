@@ -21,6 +21,10 @@ import {
   userSpecificVideos,
   deleteVideo,
 } from "../controllers/video.controller.js";
+import {
+  channelSubscription,
+  unsubscribeFromChannel,
+} from "../controllers/subUnsub.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -81,9 +85,16 @@ router
 router
   .route("/update-cover-image")
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
-router.route("/c/:channelOrUserName").get(verifyJWT, getChannelProfile);
+router.route("/c/:username").get(verifyJWT, getChannelProfile);
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
 
+// routes for sub unsub channels
+router
+  .route("/channel-subscription/:channelUserName")
+  .post(verifyJWT, channelSubscription);
+router
+  .route("/unsubscribed/:channelUserName")
+  .delete(verifyJWT, unsubscribeFromChannel);
 // check protected route with session
 router.route("/profile").get(Protect, checkUserProfile);
 

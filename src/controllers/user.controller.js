@@ -533,23 +533,23 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 
 const getChannelProfile = asyncHandler(async (req, res) => {
   // get the channel name or user from URL
-  const { channelOrUserName } = req.params;
-  console.log(channelOrUserName);
-  if (!channelOrUserName?.trim()) {
+  const { username } = req.params;
+  console.log(username);
+  if (!username?.trim()) {
     throw new ApiErrorHandler(404, "username in url does not exist");
   }
-  // here we use aggregate to match the all docs related to this channel
+  // here we use aggregate to match the channel privded by username from user
   const channel = await User.aggregate([
     {
       $match: {
-        userName: channelOrUserName?.toLowerCase(),
+        userName: username?.toLowerCase(),
       },
     },
     {
       // get the total subscribers
       $lookup: {
         from: "subscriptions", // coz in DB model name is small and plural
-        localField: "_id",
+        localField: "_id", // from user's collection
         foreignField: "channel", // by channel we get the total docs or subscriber
         as: "subscribers",
       },
@@ -599,7 +599,7 @@ const getChannelProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  console.log("channel return type: ", channel);
+  //console.log("channel return type: ", channel);
   // in aggregation return type is an array
   if (!channel?.length) {
     throw new ApiErrorHandler(404, "channel does not exists");

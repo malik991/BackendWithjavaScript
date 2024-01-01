@@ -12,6 +12,7 @@ import {
   updateCoverImage,
   getChannelProfile,
   getWatchHistory,
+  addToWatchHistory,
 } from "../controllers/user.controller.js";
 import {
   uploadVideo,
@@ -48,7 +49,8 @@ router.route("/register").post(
 
 router.route("/login").post(upload.none(), loginUser);
 router.route("/get-all-videos").get(getAllVideos);
-// secured routes with token
+// *********** secured routes with token ************ .---------------
+// video controller routes
 router.route("/upload-video").post(
   verifyJWT,
   upload.fields([
@@ -71,7 +73,7 @@ router
   .patch(verifyJWT, upload.single("thumbNail"), updateThumbNail);
 router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
 router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo);
-/// users routes
+/// ********** users controller routes ******************
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
 router.route("/change-password").post(verifyJWT, upload.none(), updatePassword);
@@ -87,6 +89,7 @@ router
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
 router.route("/c/:username").get(verifyJWT, getChannelProfile);
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
+router.route("/add-watch-history/:videoId").post(verifyJWT, addToWatchHistory);
 
 // routes for sub unsub channels
 router

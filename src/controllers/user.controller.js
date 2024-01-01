@@ -664,7 +664,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   if (!user?.length) {
     throw new ApiErrorHandler(404, "watch history not found");
   }
-
+  // console.log("User: ", user[0].watchHistory);
   return res
     .status(200)
     .json(
@@ -674,6 +674,41 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         "watch history fetched successfully 😊"
       )
     );
+});
+
+// add to watchhistory
+const addToWatchHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!req.user?._id) {
+    throw new ApiErrorHandler("400", "Invalid User Id");
+  }
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "Invalid video Id.");
+  }
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $addToSet: {
+          // $addToSet added videoIds ensure no duplication occurence :)
+          watchHistory: videoId,
+        },
+      },
+      { new: true }
+    ).select("-password");
+    if (!user) {
+      throw new ApiErrorHandler(404, "watch history user's not added");
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, user, "Video added to watch history"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message ||
+        "internal server error while tracking user's watch history"
+    );
+  }
 });
 
 export {
@@ -689,4 +724,5 @@ export {
   updateCoverImage,
   getChannelProfile,
   getWatchHistory,
+  addToWatchHistory,
 };

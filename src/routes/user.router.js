@@ -2,7 +2,6 @@ import { Router } from "express";
 import {
   registerUser,
   loginUser,
-  checkUserProfile,
   logoutUser,
   getRefreshAccessToken,
   updatePassword,
@@ -26,6 +25,10 @@ import {
   channelSubscription,
   unsubscribeFromChannel,
 } from "../controllers/subUnsub.controller.js";
+import {
+  createPlaylist,
+  updatePlaylist,
+} from "../controllers/playlist.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -91,14 +94,22 @@ router.route("/c/:username").get(verifyJWT, getChannelProfile);
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
 router.route("/add-watch-history/:videoId").post(verifyJWT, addToWatchHistory);
 
-// routes for sub unsub channels
+// *********** routes for sub unsub channels
 router
   .route("/channel-subscription/:channelUserName")
   .post(verifyJWT, channelSubscription);
 router
   .route("/unsubscribed/:channelUserName")
   .delete(verifyJWT, unsubscribeFromChannel);
+
+// ******* Play list routes *********
+router
+  .route("/create-play-list")
+  .post(verifyJWT, upload.none(), createPlaylist);
+router
+  .route("/update-playlist/:playlistId")
+  .post(verifyJWT, upload.none(), updatePlaylist);
 // check protected route with session
-router.route("/profile").get(Protect, checkUserProfile);
+//router.route("/profile").get(Protect, checkUserProfile);
 
 export default router;

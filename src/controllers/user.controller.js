@@ -246,26 +246,6 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
-// check user
-const checkUserProfile = asyncHandler(async (req, res) => {
-  const userid = req.session.userId;
-  const userName = req.session.username;
-  if (userid) {
-    return res.status(200).json(
-      new ApiResponce(
-        200,
-        {
-          userid,
-          userName,
-        },
-        "huraah 😁"
-      )
-    );
-  } else {
-    return res.status(401).json(new ApiResponce(401, null, "hi hi hi"));
-  }
-});
-
 const logoutUser = asyncHandler(async (req, res) => {
   if (req.user._id) {
     await User.findByIdAndUpdate(
@@ -714,7 +694,6 @@ const addToWatchHistory = asyncHandler(async (req, res) => {
 export {
   registerUser,
   loginUser,
-  checkUserProfile,
   logoutUser,
   getRefreshAccessToken,
   updatePassword,

@@ -109,10 +109,66 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 });
 
-const addVideoIntoPlaylist = asyncHandler(async (req, res) => {});
+const addVideoIntoPlaylist = asyncHandler(async (req, res) => {
+  //videoid and playlistid fromparams
+  //check video id correct or null
+  // req.user check\
+  // check video id already exist in this playlist and into loggedin user context
+  // insert into videos array
+
+  const { videoId, playlistId } = req.params;
+  const decodedVideoId = decodeURIComponent(videoId);
+  console.log("Video ID:", videoId);
+  console.log("Playlist ID:", playlistId);
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "video Id not exist");
+  }
+  if (!playlistId || !mongoose.Types.ObjectId.isValid(playlistId)) {
+    throw new ApiErrorHandler(404, "Playlist Id not valid");
+  }
+  if (!req.user?._id) {
+    throw new ApiErrorHandler("400", "user not exist, please login again");
+  }
+  try {
+    const checkVideoExist = await Playlist.findOne({
+      _id: playlistId,
+      owner: req.user?._id,
+      videos: { $in: [videoId] },
+    });
+    if (checkVideoExist) {
+      throw new ApiErrorHandler(404, "video already exist");
+    }
+    const updatePlayList = await Playlist.findOneAndUpdate(
+      {
+        _id: playlistId,
+        owner: req.user?._id,
+      },
+      {
+        $addToSet: { videos: videoId },
+      },
+      {
+        new: true,
+      }
+    );
+    if (!updatePlayList) {
+      throw new ApiErrorHandler(
+        404,
+        "video not added into this playlist, try again"
+      );
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, updatePlayList, "video added successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message || "internal server error while adding video into playlisy"
+    );
+  }
+});
 
 const deletePlaylist = asyncHandler(async (req, res) => {});
 
 const deleteVideoFromPlaylist = asyncHandler(async (req, res) => {});
 
-export { createPlaylist, updatePlaylist };
+export { createPlaylist, updatePlaylist, addVideoIntoPlaylist };

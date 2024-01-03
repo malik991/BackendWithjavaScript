@@ -28,6 +28,7 @@ import {
 import {
   createPlaylist,
   updatePlaylist,
+  addVideoIntoPlaylist,
 } from "../controllers/playlist.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -109,6 +110,9 @@ router
 router
   .route("/update-playlist/:playlistId")
   .post(verifyJWT, upload.none(), updatePlaylist);
+router
+  .route("/add-video-into-playlist/:videoId/:playlistId")
+  .post(verifyJWT, addVideoIntoPlaylist);
 // check protected route with session
 //router.route("/profile").get(Protect, checkUserProfile);
 

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
+import { Playlist } from "../models/playlist.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import {
@@ -299,6 +300,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
     // delte the video
     await Video.deleteOne({ _id: videoId, owner: userId });
 
+    // Remove references to the deleted video from all playlists
+
+    await Playlist.updateMany(
+      { videos: videoId },
+      { $pull: { videos: videoId } }
+    );
     // get refreshed collection of videos
     const userAllvideos = await Video.find({ owner: userId });
     return res

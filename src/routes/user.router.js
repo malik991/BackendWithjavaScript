@@ -29,6 +29,9 @@ import {
   createPlaylist,
   updatePlaylist,
   addVideoIntoPlaylist,
+  checkUserPlaylists,
+  deletePlaylist,
+  deleteVideoFromPlaylist,
 } from "../controllers/playlist.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
@@ -113,6 +116,11 @@ router
 router
   .route("/add-video-into-playlist/:videoId/:playlistId")
   .post(verifyJWT, addVideoIntoPlaylist);
+router.route("/check-user-playlist").get(verifyJWT, checkUserPlaylists);
+router.route("/delete-playlist/:playlistId").delete(verifyJWT, deletePlaylist);
+router
+  .route("/deleted-from-playlist/:videoId/:playlistId")
+  .delete(verifyJWT, deleteVideoFromPlaylist);
 // check protected route with session
 //router.route("/profile").get(Protect, checkUserProfile);
 

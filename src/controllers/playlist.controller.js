@@ -117,9 +117,9 @@ const addVideoIntoPlaylist = asyncHandler(async (req, res) => {
   // insert into videos array
 
   const { videoId, playlistId } = req.params;
-  const decodedVideoId = decodeURIComponent(videoId);
-  console.log("Video ID:", videoId);
-  console.log("Playlist ID:", playlistId);
+  //const decodedVideoId = decodeURIComponent(videoId);
+  //console.log("Video ID:", videoId);
+  //console.log("Playlist ID:", playlistId);
   if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
     throw new ApiErrorHandler(404, "video Id not exist");
   }
@@ -167,8 +167,113 @@ const addVideoIntoPlaylist = asyncHandler(async (req, res) => {
   }
 });
 
-const deletePlaylist = asyncHandler(async (req, res) => {});
+const checkUserPlaylists = asyncHandler(async (req, res) => {
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(400, "user not exist, please login");
+  }
+  try {
+    const getPlaylists = await Playlist.find({ owner: req.user?._id });
+    if (!getPlaylists || getPlaylists.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponce(200, {}, "playlist not found, please create"));
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(200, getPlaylists, "Playlists retrieved successfully")
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message ||
+        "internal server error while checking the users playlists"
+    );
+  }
+});
 
-const deleteVideoFromPlaylist = asyncHandler(async (req, res) => {});
+const deletePlaylist = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  if (!playlistId || !mongoose.Types.ObjectId.isValid(playlistId)) {
+    throw new ApiErrorHandler(404, "playlist Id not correct or not exist");
+  }
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(400, "user not exist, please login again");
+  }
+  try {
+    const playlistExist = await Playlist.findOneAndDelete(
+      {
+        _id: playlistId,
+        owner: req.user?._id,
+      },
+      { new: true }
+    );
+    if (!playlistExist) {
+      throw new ApiErrorHandler(400, "playlist not exist or Unauthorized user");
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(200, playlistExist, "Playlist deleted successfully ")
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message || "internal server error while deleting the playlist"
+    );
+  }
+});
 
-export { createPlaylist, updatePlaylist, addVideoIntoPlaylist };
+const deleteVideoFromPlaylist = asyncHandler(async (req, res) => {
+  const { videoId, playlistId } = req.params;
+  if (!playlistId || !mongoose.Types.ObjectId.isValid(playlistId)) {
+    throw new ApiErrorHandler(404, "playlist Id not correct or not exist");
+  }
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "video Id not correct or not exist");
+  }
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(400, "user not exist, please login again");
+  }
+  try {
+    const deletedVideoPlaylist = await Playlist.findOneAndUpdate(
+      {
+        _id: playlistId,
+        videos: videoId,
+        owner: req.user?._id,
+      },
+      {
+        $pull: {
+          videos: videoId,
+        },
+      },
+      { new: true }
+    );
+    if (!deletedVideoPlaylist) {
+      throw new ApiErrorHandler(401, "video not exist or Unauthorized user");
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(
+          200,
+          deletedVideoPlaylist,
+          "Video deleted from playlist successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message || "internal server error while deleting the playlist"
+    );
+  }
+});
+
+export {
+  createPlaylist,
+  updatePlaylist,
+  addVideoIntoPlaylist,
+  checkUserPlaylists,
+  deletePlaylist,
+  deleteVideoFromPlaylist,
+};

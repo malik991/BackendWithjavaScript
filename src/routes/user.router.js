@@ -13,26 +13,12 @@ import {
   getWatchHistory,
   addToWatchHistory,
 } from "../controllers/user.controller.js";
-import {
-  uploadVideo,
-  updateTitleAndDescription,
-  updateThumbNail,
-  getAllVideos,
-  userSpecificVideos,
-  deleteVideo,
-} from "../controllers/video.controller.js";
+
 import {
   channelSubscription,
   unsubscribeFromChannel,
 } from "../controllers/subUnsub.controller.js";
-import {
-  createPlaylist,
-  updatePlaylist,
-  addVideoIntoPlaylist,
-  checkUserPlaylists,
-  deletePlaylist,
-  deleteVideoFromPlaylist,
-} from "../controllers/playlist.controller.js";
+
 import { upload } from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -55,31 +41,10 @@ router.route("/register").post(
 );
 
 router.route("/login").post(upload.none(), loginUser);
-router.route("/get-all-videos").get(getAllVideos);
+
 // *********** secured routes with token ************ .---------------
 // video controller routes
-router.route("/upload-video").post(
-  verifyJWT,
-  upload.fields([
-    {
-      name: "videoFile",
-      maxCount: 1,
-    },
-    {
-      name: "thumbNail",
-      maxCount: 1,
-    },
-  ]),
-  uploadVideo
-);
-router
-  .route("/update-title-description/:videoId")
-  .patch(verifyJWT, upload.none(), updateTitleAndDescription);
-router
-  .route("/update-thumbnail/:videoId")
-  .patch(verifyJWT, upload.single("thumbNail"), updateThumbNail);
-router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
-router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo);
+
 /// ********** users controller routes ******************
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/new-token").post(getRefreshAccessToken);
@@ -107,20 +72,7 @@ router
   .delete(verifyJWT, unsubscribeFromChannel);
 
 // ******* Play list routes *********
-router
-  .route("/create-play-list")
-  .post(verifyJWT, upload.none(), createPlaylist);
-router
-  .route("/update-playlist/:playlistId")
-  .post(verifyJWT, upload.none(), updatePlaylist);
-router
-  .route("/add-video-into-playlist/:videoId/:playlistId")
-  .post(verifyJWT, addVideoIntoPlaylist);
-router.route("/check-user-playlist").get(verifyJWT, checkUserPlaylists);
-router.route("/delete-playlist/:playlistId").delete(verifyJWT, deletePlaylist);
-router
-  .route("/deleted-from-playlist/:videoId/:playlistId")
-  .delete(verifyJWT, deleteVideoFromPlaylist);
+
 // check protected route with session
 //router.route("/profile").get(Protect, checkUserProfile);
 

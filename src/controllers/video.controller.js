@@ -159,15 +159,13 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
       "title and descriptions are mendatory fields"
     );
   }
-  if (!videoId || typeof videoId !== "string" || videoId.trim() === "") {
-    throw new ApiErrorHandler(404, "video id empty or undefined");
-  }
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
     throw new ApiErrorHandler(400, "Invalid videoId");
   }
   try {
-    const updatedVideo = await Video.findByIdAndUpdate(
-      videoId,
+    const updatedVideo = await Video.findOneAndUpdate(
+      { _id: videoId, owner: req.user?._id },
       {
         $set: {
           title,
@@ -178,7 +176,12 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
         new: true,
       }
     );
-    //console.log("updated video: ", updatedVideo);
+    if (!updatedVideo) {
+      throw new ApiErrorHandler(
+        404,
+        "video does not exist or Unauthorized User"
+      );
+    }
 
     return res
       .status(200)
@@ -210,11 +213,17 @@ const updateThumbNail = asyncHandler(async (req, res) => {
     if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
       throw new ApiErrorHandler(404, "Video Id is not valid");
     }
-    const result = await Video.findById(videoId);
+    const result = await Video.findOne({ _id: videoId, owner: req.user?._id });
     if (!result || result.length === 0) {
       return res
         .status(200)
-        .json(new ApiResponce(200, result, "video not found"));
+        .json(
+          new ApiResponce(
+            200,
+            result,
+            "video does not exist or Unathourized user"
+          )
+        );
     }
     const { deleteImageResponse } = await deleteFromCloudinary([
       result.ThumbNailPublicId,
@@ -225,7 +234,7 @@ const updateThumbNail = asyncHandler(async (req, res) => {
         "Problem while delteing file from cloudinary, please try again"
       );
     }
-    console.log("thumbNial deletion response: ", deleteImageResponse);
+    //console.log("thumbNial deletion response: ", deleteImageResponse);
 
     const cloudniaryThumbNailUpdate =
       await uploadOnCloudinary(localPathThumbNail);
@@ -254,7 +263,7 @@ const updateThumbNail = asyncHandler(async (req, res) => {
       );
   } finally {
     if (localPathThumbNail && fs.existsSync(localPathThumbNail)) {
-      console.log("enter in finally if condition");
+      //console.log("enter in finally if condition");
       fs.unlinkSync(localPathThumbNail);
     }
   }

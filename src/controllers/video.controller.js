@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
 import { Playlist } from "../models/playlist.model.js";
+import { Like } from "../models/like.model.js";
+import { Comment } from "../models/comment.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import {
@@ -315,6 +317,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
       { videos: videoId },
       { $pull: { videos: videoId } }
     );
+
+    // Remove comments associated with the deleted video
+    await Comment.deleteMany({ video: videoId });
+    //remove likes from like model associated with this video
+    await Like.deleteMany({ video: videoId });
     // get refreshed collection of videos
     const userAllvideos = await Video.find({ owner: userId });
     return res
@@ -329,6 +336,43 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 });
 
+const likeVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(401, "user not found, please login");
+  }
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "video id is invalid");
+  }
+  try {
+    // Check if the user has already liked the video
+    const existingLike = await Like.findOne({
+      video: videoId,
+      likedBy: req.user._id,
+    });
+
+    if (existingLike) {
+      throw new ApiErrorHandler(400, "User has already liked this video");
+    }
+    const likeDoc = await Like.create({
+      video: videoId,
+      likedBy: req.user._id,
+    });
+    if (!likeDoc) {
+      throw new ApiErrorHandler(401, "Invalid video or unathorized user");
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, likeDoc, "Liked Successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error while like the video"
+    );
+  }
+});
+
 export {
   uploadVideo,
   updateThumbNail,
@@ -336,4 +380,5 @@ export {
   getAllVideos,
   userSpecificVideos,
   deleteVideo,
+  likeVideo,
 };

@@ -3,7 +3,7 @@ import { Comment } from "../models/comment.model.js";
 import { Like } from "../models/like.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 const addComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
@@ -42,14 +42,14 @@ const addComment = asyncHandler(async (req, res) => {
 
 const editComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
-  const { videoId } = req.params;
+  const { contentId } = req.params;
   if (!content || content.length < 2 || content.length > 255) {
     throw new ApiErrorHandler(
       404,
       "comment must be between 2 and 255 characters"
     );
   }
-  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+  if (!contentId || !mongoose.Types.ObjectId.isValid(contentId)) {
     throw new ApiErrorHandler(404, "video not found, Invalid Video Id.");
   }
   if (!req.user?._id) {
@@ -59,7 +59,7 @@ const editComment = asyncHandler(async (req, res) => {
     const updateComment = await Comment.findOneAndUpdate(
       {
         owner: req.user._id,
-        video: videoId,
+        _id: contentId,
       },
       {
         $set: {
@@ -123,4 +123,29 @@ const deleteComment = asyncHandler(async (req, res) => {
   }
 });
 
-export { addComment, editComment, deleteComment };
+const getAllComments = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "Invalid Video Id");
+  }
+  try {
+    const allComments = await Comment.find({ video: videoId });
+    if (!allComments || allComments.length === 0) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponce(200, allComments || [], "comments not available")
+        );
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, allComments, "comments fetched successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message || "internal server error while fetching comments"
+    );
+  }
+});
+
+export { addComment, editComment, deleteComment, getAllComments };

@@ -8,6 +8,7 @@ import {
   checkUserPlaylists,
   deletePlaylist,
   deleteVideoFromPlaylist,
+  getPlaylistById,
 } from "../controllers/playlist.controller.js";
 
 const router = Router();
@@ -26,5 +27,6 @@ router.route("/delete-playlist/:playlistId").delete(verifyJWT, deletePlaylist);
 router
   .route("/deleted-from-playlist/:videoId/:playlistId")
   .delete(verifyJWT, deleteVideoFromPlaylist);
+router.route("/get-playlist/:playlistId").get(verifyJWT, getPlaylistById);
 
 export default router;

@@ -268,6 +268,27 @@ const deleteVideoFromPlaylist = asyncHandler(async (req, res) => {
 });
 
 //getPlaylistById
+const getPlaylistById = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  if (!playlistId || !mongoose.Types.ObjectId.isValid(playlistId)) {
+    throw new ApiErrorHandler(404, "Invalid play list Id");
+  }
+  try {
+    const getPlaylist = await Playlist.findById(playlistId);
+    if (!getPlaylist) {
+      throw new ApiErrorHandler(404, "play list not available");
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, getPlaylist, "playlist fetched successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error?.statusCode || 500,
+      error?.message ||
+        "internal server error while fetching the playlist by Id"
+    );
+  }
+});
 
 export {
   createPlaylist,
@@ -276,4 +297,5 @@ export {
   checkUserPlaylists,
   deletePlaylist,
   deleteVideoFromPlaylist,
+  getPlaylistById,
 };

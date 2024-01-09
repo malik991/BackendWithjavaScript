@@ -267,6 +267,8 @@ const deleteVideoFromPlaylist = asyncHandler(async (req, res) => {
   }
 });
 
+//getPlaylistById
+
 export {
   createPlaylist,
   updatePlaylist,

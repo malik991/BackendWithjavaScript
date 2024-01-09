@@ -336,6 +336,39 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 });
 
+// get videobyID
+
+const getVideoById = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user?._id;
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "Invalid Video Id");
+  }
+  if (!userId) {
+    throw new ApiErrorHandler(401, "User is not authorized or login");
+  }
+  try {
+    const userVideos = await Video.find({ _id: videoId });
+    if (!userVideos || userVideos.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponce(200, userVideos || [], "Video not found"));
+    }
+    // if (!userVideos || userVideos.owner.toString() !== userId.toString()) {
+    //   throw new ApiErrorHandler(403, "User is not authorized to view this video");
+    // }
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, userVideos, "videos fetched sucessfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error in get user videos"
+    );
+  }
+});
+
 const likeVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -381,4 +414,5 @@ export {
   userSpecificVideos,
   deleteVideo,
   likeVideo,
+  getVideoById,
 };

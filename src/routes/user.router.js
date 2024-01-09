@@ -15,8 +15,10 @@ import {
 } from "../controllers/user.controller.js";
 
 import {
-  channelSubscription,
-  unsubscribeFromChannel,
+  toggledSubscription,
+  getSubscribedChannels,
+  getUserChannelSubscribers,
+  //unsubscribeFromChannel,
 } from "../controllers/subUnsub.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -66,10 +68,16 @@ router.route("/add-watch-history/:videoId").post(verifyJWT, addToWatchHistory);
 // *********** routes for sub unsub channels
 router
   .route("/channel-subscription/:channelUserName")
-  .post(verifyJWT, channelSubscription);
+  .post(verifyJWT, toggledSubscription);
 router
-  .route("/unsubscribed/:channelUserName")
-  .delete(verifyJWT, unsubscribeFromChannel);
+  .route("/get-subscribers/:channelId")
+  .get(verifyJWT, getUserChannelSubscribers);
+router
+  .route("/get-channel-list/:subscriberId")
+  .get(verifyJWT, getSubscribedChannels);
+// router
+//   .route("/unsubscribed/:channelUserName")
+//   .delete(verifyJWT, unsubscribeFromChannel);
 
 // ******* Play list routes *********
 

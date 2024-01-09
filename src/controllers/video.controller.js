@@ -413,6 +413,5 @@ export {
   getAllVideos,
   userSpecificVideos,
   deleteVideo,
-  likeVideo,
   getVideoById,
 };

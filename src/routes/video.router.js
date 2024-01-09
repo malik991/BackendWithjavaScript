@@ -8,7 +8,6 @@ import {
   getAllVideos,
   userSpecificVideos,
   deleteVideo,
-  likeVideo,
   getVideoById,
 } from "../controllers/video.controller.js";
 
@@ -38,6 +37,5 @@ router
 router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
 router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo);
 router.route("/get-video/:videoId").get(verifyJWT, getVideoById);
-router.route("/like-video/:videoId").post(verifyJWT, likeVideo);
 
 export default router;

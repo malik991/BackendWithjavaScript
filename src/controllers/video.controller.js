@@ -348,15 +348,17 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(401, "User is not authorized or login");
   }
   try {
-    const userVideos = await Video.find({ _id: videoId });
-    if (!userVideos || userVideos.length === 0) {
+    const userVideos = await Video.findOne({ _id: videoId });
+    if (!userVideos) {
       return res
         .status(200)
         .json(new ApiResponce(200, userVideos || [], "Video not found"));
     }
-    // if (!userVideos || userVideos.owner.toString() !== userId.toString()) {
-    //   throw new ApiErrorHandler(403, "User is not authorized to view this video");
-    // }
+    // Increment the views count
+    userVideos.views += 1;
+
+    // Save the updated video document
+    await userVideos.save();
 
     return res
       .status(200)
@@ -365,43 +367,6 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(
       error.statusCode || 500,
       error?.message || "internal server error in get user videos"
-    );
-  }
-});
-
-const likeVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
-
-  if (!req.user?._id) {
-    throw new ApiErrorHandler(401, "user not found, please login");
-  }
-  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
-    throw new ApiErrorHandler(404, "video id is invalid");
-  }
-  try {
-    // Check if the user has already liked the video
-    const existingLike = await Like.findOne({
-      video: videoId,
-      likedBy: req.user._id,
-    });
-
-    if (existingLike) {
-      throw new ApiErrorHandler(400, "User has already liked this video");
-    }
-    const likeDoc = await Like.create({
-      video: videoId,
-      likedBy: req.user._id,
-    });
-    if (!likeDoc) {
-      throw new ApiErrorHandler(401, "Invalid video or unathorized user");
-    }
-    return res
-      .status(200)
-      .json(new ApiResponce(200, likeDoc, "Liked Successfully"));
-  } catch (error) {
-    throw new ApiErrorHandler(
-      error.statusCode || 500,
-      error?.message || "internal server error while like the video"
     );
   }
 });

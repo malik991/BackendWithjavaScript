@@ -252,9 +252,12 @@ const logoutUser = asyncHandler(async (req, res) => {
       req.user._id,
       {
         // use mongo db operator, and del the refresh token
-        $set: {
-          refreshToken: undefined,
+        $unset: {
+          refreshToken: 1, // this removes the field from document
         },
+        // $set: {
+        //   refreshToken: undefined,
+        // },
       },
       {
         // in this way we get new updated value instead of old , so refresh token wil be undefined

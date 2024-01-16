@@ -107,14 +107,59 @@ const uploadVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  // hit query to videos collections and get all videos documents
+  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   try {
-    const getVideos = await Video.find(
-      {},
-      "videoFile thumbNail title duration views owner"
+    let pipeline = [];
+
+    if (userId) {
+      pipeline.push({
+        $match: { owner: new mongoose.Types.ObjectId(userId) },
+      });
+    }
+    if (sortBy && sortType) {
+      const sortOptions = {};
+      sortOptions[sortBy] = sortType === "desc" ? -1 : 1;
+      pipeline.push({
+        $sort: sortOptions,
+      });
+    }
+    pipeline.push(
+      {
+        $skip: (page - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        // destruct all docs
+        $unwind: "$ownerDetails",
+      },
+      {
+        $project: {
+          videoFile: 1,
+          thumbNail: 1,
+          title: 1,
+          duration: 1,
+          views: 1,
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      }
     );
+    const getVideos = await Video.aggregate(pipeline);
     if (!getVideos || getVideos.length === 0) {
-      throw new ApiErrorHandler(404, "No video found");
+      return res.status(200).json(new ApiResponce(404, [], "No videos found"));
     }
     res.status(200).json(new ApiResponce(200, getVideos, "all videos Fetched"));
   } catch (error) {
@@ -336,8 +381,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 });
 
-// get videobyID
-
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const userId = req.user?._id;
@@ -348,25 +391,56 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(401, "User is not authorized or login");
   }
   try {
-    const userVideos = await Video.findOne({ _id: videoId });
-    if (!userVideos) {
+    //const userVideos = await Video.findOne({ _id: videoId });
+    // Use findOneAndUpdate to atomically increment views and get the updated document
+    const userVideo = await Video.findOneAndUpdate(
+      { _id: videoId },
+      { $inc: { views: 1 } }, // Increment the views count
+      { new: true } // Return the updated document
+    );
+    if (!userVideo) {
       return res
         .status(200)
-        .json(new ApiResponce(200, userVideos || [], "Video not found"));
+        .json(new ApiResponce(200, userVideo || [], "Video not found"));
     }
-    // Increment the views count
-    userVideos.views += 1;
-
-    // Save the updated video document
-    await userVideos.save();
 
     return res
       .status(200)
-      .json(new ApiResponce(200, userVideos, "videos fetched sucessfully"));
+      .json(new ApiResponce(200, userVideo, "videos fetched sucessfully"));
   } catch (error) {
     throw new ApiErrorHandler(
       error.statusCode || 500,
       error?.message || "internal server error in get user videos"
+    );
+  }
+});
+
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(401, "user not found , please login");
+  }
+
+  try {
+    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+      throw new ApiErrorHandler(400, "Invalid Video Id");
+    }
+
+    const video = await Video.findOne({ _id: videoId, owner: req.user?._id });
+    if (!video) {
+      throw new ApiErrorHandler(401, "Video not found, Unauthorized user");
+    }
+
+    video.isPublished = !video.isPublished;
+    await video.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, video, "Publish status toggled successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error.message || "Internal server error while toggling publish status"
     );
   }
 });
@@ -379,4 +453,5 @@ export {
   userSpecificVideos,
   deleteVideo,
   getVideoById,
+  togglePublishStatus,
 };

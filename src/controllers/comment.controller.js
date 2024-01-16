@@ -130,17 +130,56 @@ const getAllComments = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(404, "Invalid Video Id");
   }
   try {
-    const allComments = await Comment.find({ video: videoId });
-    if (!allComments || allComments.length === 0) {
+    const totalComments = await Comment.countDocuments({ video: videoId });
+    if (totalComments === 0) {
       return res
         .status(200)
-        .json(
-          new ApiResponce(200, allComments || [], "comments not available")
-        );
+        .json(new ApiResponce(200, [], "No comments available for this video"));
     }
-    return res
-      .status(200)
-      .json(new ApiResponce(200, allComments, "comments fetched successfully"));
+    let pipeline = [];
+    pipeline.push(
+      {
+        $skip: (page - 1) * parseInt(limit),
+      },
+      {
+        $limit: parseInt(limit),
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        $unwind: "$ownerDetails",
+      },
+      {
+        $project: {
+          content: 1,
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      }
+    );
+    const allComments = await Comment.aggregate(pipeline);
+
+    if (!allComments || allComments.length === 0) {
+      return res
+        .status(400)
+        .json(new ApiResponce(400, [], "comments not available"));
+    }
+    // Provide pagination information in the response
+    const response = new ApiResponce(
+      200,
+      { comments: allComments, totalComments },
+      "Comments fetched successfully"
+    );
+    return res.status(200).json(response);
   } catch (error) {
     throw new ApiErrorHandler(
       error?.statusCode || 500,

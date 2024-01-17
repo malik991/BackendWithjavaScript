@@ -110,11 +110,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   try {
     let pipeline = [];
-
+    let totalVideos;
     if (userId) {
       pipeline.push({
         $match: { owner: new mongoose.Types.ObjectId(userId) },
       });
+      totalVideos = await Video.countDocuments({ owner: userId });
+    } else {
+      totalVideos = await Video.countDocuments();
+    }
+    if (!totalVideos) {
+      return res.status(200).json(new ApiResponce(200, [], "videos not found"));
     }
     if (sortBy && sortType) {
       const sortOptions = {};
@@ -161,7 +167,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
     if (!getVideos || getVideos.length === 0) {
       return res.status(200).json(new ApiResponce(404, [], "No videos found"));
     }
-    res.status(200).json(new ApiResponce(200, getVideos, "all videos Fetched"));
+    const responce = new ApiResponce(
+      200,
+      { sortedVideos: getVideos, totalVideos },
+      "all videos Fetched"
+    );
+    //res.status(200).json(new ApiResponce(200, getVideos, "all videos Fetched"));
+    res.status(200).json(responce);
   } catch (error) {
     console.log("Error in GetAllVideos ::", error?.message);
     throw new ApiErrorHandler(

@@ -40,6 +40,9 @@ import videoRouter from "./routes/video.router.js";
 import playlistRouter from "./routes/playlist.router.js";
 import commentRouter from "./routes/comment.router.js";
 import likeRouter from "./routes/like.router.js";
+import tweetRouter from "./routes/tweet.router.js";
+import dashboardRouter from "./routes/dashboard.router.js";
+import healthCheckRouter from "./routes/healthCheck.router.js";
 
 // routes declration , now we use middleware instead of app.get/post , coz we declrae our router separatly
 app.use("/api/v1/users", userRouter);
@@ -47,6 +50,9 @@ app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/playlist", playlistRouter);
 app.use("/api/v1/comment", commentRouter);
 app.use("/api/v1/like", likeRouter);
+app.use("/api/v1/tweet", tweetRouter);
+app.use("/api/v1/dashboard", dashboardRouter);
+app.use("/api/v1/healthCheck", healthCheckRouter);
 
 //http://localhost:8000/api/v1/users/register or login
 

@@ -23,11 +23,15 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     if (existingLike) {
       //throw new ApiErrorHandler(400, "User has already liked this video");
       await Like.deleteOne({ video: videoId });
+      return res
+        .status(200)
+        .json(new ApiResponce(200, [], "video disliked Successfully"));
     }
     const likeDoc = await Like.create({
       video: videoId,
       likedBy: req.user._id,
     });
+
     if (!likeDoc) {
       throw new ApiErrorHandler(401, "Invalid video or unathorized user");
     }
@@ -61,6 +65,9 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     if (existingLike) {
       //throw new ApiErrorHandler(400, "User has already liked this video");
       await Like.deleteOne({ comment: commentId });
+      return res
+        .status(200)
+        .json(new ApiResponce(200, [], "comment disliked Successfully"));
     }
     const likeDoc = await Like.create({
       comment: commentId,
@@ -83,6 +90,42 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 const toggleTweetLike = asyncHandler(async (req, res) => {
   const { tweetId } = req.params;
   //TODO: toggle like on tweet
+  if (!req.user?._id) {
+    throw new ApiErrorHandler(401, "user not found, please login");
+  }
+  if (!tweetId || !mongoose.Types.ObjectId.isValid(tweetId)) {
+    throw new ApiErrorHandler(404, "Tweet id is invalid");
+  }
+  try {
+    // Check if the user has already liked the tweet
+    const existingLike = await Like.findOne({
+      tweet: tweetId,
+      likedBy: req.user._id,
+    });
+
+    if (existingLike) {
+      //throw new ApiErrorHandler(400, "User has already liked this video");
+      await Like.deleteOne({ tweet: tweetId });
+      return res
+        .status(200)
+        .json(new ApiResponce(200, [], "tweet disliked Successfully"));
+    }
+    const likeDoc = await Like.create({
+      tweet: tweetId,
+      likedBy: req.user._id,
+    });
+    if (!likeDoc) {
+      throw new ApiErrorHandler(401, "Invalid action or unathorized user");
+    }
+    return res
+      .status(200)
+      .json(new ApiResponce(200, likeDoc, "Tweet Liked Successfully"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error while like the Tweet"
+    );
+  }
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {

@@ -67,7 +67,7 @@ router.route("/add-watch-history/:videoId").post(verifyJWT, addToWatchHistory);
 
 // *********** routes for sub unsub channels
 router
-  .route("/channel-subscription/:channelUserName")
+  .route("/toggled-subscription/:channelUserName")
   .post(verifyJWT, toggledSubscription);
 router
   .route("/get-subscribers/:channelId")

@@ -109,33 +109,44 @@ const uploadVideo = asyncHandler(async (req, res) => {
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   try {
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+
     let pipeline = [];
-    let totalVideos;
+
+    if (query) {
+      console.log(query);
+      pipeline.push({
+        $search: {
+          index: "search-videos",
+          text: {
+            query: query,
+            path: ["title", "description"],
+          },
+        },
+      });
+    }
+
     if (userId) {
       pipeline.push({
-        $match: { owner: new mongoose.Types.ObjectId(userId) },
+        $match: {
+          owner: new mongoose.Types.ObjectId(userId),
+        },
       });
-      totalVideos = await Video.countDocuments({ owner: userId });
-    } else {
-      totalVideos = await Video.countDocuments();
     }
-    if (!totalVideos) {
-      return res.status(200).json(new ApiResponce(200, [], "videos not found"));
-    }
+
+    pipeline.push({ $match: { isPublished: true } });
+
     if (sortBy && sortType) {
-      const sortOptions = {};
-      sortOptions[sortBy] = sortType === "desc" ? -1 : 1;
+      //console.log(sortBy, sortType);
       pipeline.push({
-        $sort: sortOptions,
+        $sort: {
+          [sortBy]: sortType === "asc" ? 1 : -1,
+        },
       });
+    } else {
+      pipeline.push({ $sort: { createdAt: -1 } });
     }
     pipeline.push(
-      {
-        $skip: (page - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
       {
         $lookup: {
           from: "users",
@@ -146,34 +157,54 @@ const getAllVideos = asyncHandler(async (req, res) => {
       },
       {
         // destruct all docs
-        $unwind: "$ownerDetails",
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
-        $project: {
-          videoFile: 1,
-          thumbNail: 1,
-          title: 1,
-          duration: 1,
-          views: 1,
+        $addFields: {
           owner: {
             _id: "$ownerDetails._id",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
           },
         },
+      },
+      {
+        $project: {
+          ownerDetails: 0, // Exclude the ownerDetails subdocument
+        },
       }
     );
-    const getVideos = await Video.aggregate(pipeline);
-    if (!getVideos || getVideos.length === 0) {
-      return res.status(200).json(new ApiResponce(404, [], "No videos found"));
+
+    const videosAggregate = Video.aggregate(pipeline);
+
+    const result = await Video.aggregatePaginate(videosAggregate, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
+
+    /* return result will be type of below
+  
+      result.docs
+      result.totalDocs = 100
+      result.limit = 10
+      result.page = 1
+      result.totalPages = 10
+      result.hasNextPage = true
+      result.nextPage = 2
+      result.hasPrevPage = false
+      result.prevPage = null
+    */
+
+    if (!result) {
+      throw new ApiError(500, "Something went wrong while fetching videos!!");
     }
-    const responce = new ApiResponce(
-      200,
-      { sortedVideos: getVideos, totalVideos },
-      "all videos Fetched"
-    );
-    //res.status(200).json(new ApiResponce(200, getVideos, "all videos Fetched"));
-    res.status(200).json(responce);
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, result, "All videos fetched successfully!!"));
   } catch (error) {
     console.log("Error in GetAllVideos ::", error?.message);
     throw new ApiErrorHandler(

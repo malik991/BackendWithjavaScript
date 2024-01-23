@@ -107,7 +107,6 @@ const uploadVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   try {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
 
@@ -177,14 +176,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       }
     );
-
     const videosAggregate = Video.aggregate(pipeline);
-
+    //console.log(videosAggregate);
     const result = await Video.aggregatePaginate(videosAggregate, {
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
     });
-
+    // console.log(result);
     /* return result will be type of below
   
       result.docs

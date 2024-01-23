@@ -242,7 +242,7 @@ const loginUser = asyncHandler(async (req, res) => {
   } else {
     return res
       .status(401)
-      .json(new ApiResponce(401, null, "user name or email does not exit"));
+      .json(new ApiResponce(401, [], "user name or email does not exit"));
   }
 });
 

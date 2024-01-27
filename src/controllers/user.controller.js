@@ -46,6 +46,7 @@ const registerUser = asyncHandler(async (req, res) => {
   let coverImgLocalPath;
   try {
     const { userName, email, password, fullName } = req.body;
+
     if (
       req.files &&
       Array.isArray(req.files.coverImage) &&

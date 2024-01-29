@@ -13,7 +13,7 @@ import fs from "fs";
 // Global options for cookies
 const options = {
   httpOnly: true,
-  secure: true,
+  secure: false,
 };
 
 // access and refresh tokan into db
@@ -309,7 +309,7 @@ const getRefreshAccessToken = asyncHandler(async (req, res) => {
     }
     // otherwise , generate a new token for user
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      decodedToken?._id
+      userAndRefreshTokenDb?._id
     );
 
     return res

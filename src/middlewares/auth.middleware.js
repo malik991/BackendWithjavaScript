@@ -18,6 +18,7 @@ const Protect = (req, res, next) => {
 const verifyJWT = asyncHandler(async (req, _, next) => {
   //get token from cookies or from custome headre of mobile
   try {
+    console.log("req cookie", req.cookies);
     const token =
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer", "");

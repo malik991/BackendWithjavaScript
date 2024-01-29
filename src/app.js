@@ -6,9 +6,16 @@ import cookieParser from "cookie-parser";
 const app = express();
 
 // allowed permission to fornt end, credential send credentials in header and allowed for us
+// app.use(
+//   cors({
+//     origin: process.env.CORS_ORIGIN,
+//     credentials: true,
+//   })
+// );
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: "http://localhost:5173",
+    methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
     credentials: true,
   })
 );

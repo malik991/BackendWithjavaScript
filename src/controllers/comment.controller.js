@@ -130,20 +130,22 @@ const getAllComments = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(404, "Invalid Video Id");
   }
   try {
-    const totalComments = await Comment.countDocuments({ video: videoId });
-    if (totalComments === 0) {
-      return res
-        .status(200)
-        .json(new ApiResponce(200, [], "No comments available for this video"));
-    }
+    // const totalComments = await Comment.countDocuments({
+    //   video: new mongoose.Types.ObjectId(videoId),
+    // });
+    // if (totalComments === 0) {
+    //   return res
+    //     .status(200)
+    //     .json(new ApiResponce(200, [], "No comments available for this video"));
+    // }
     let pipeline = [];
+    pipeline.push({
+      $match: {
+        video: new mongoose.Types.ObjectId(videoId),
+      },
+    });
+
     pipeline.push(
-      {
-        $skip: (page - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
       {
         $lookup: {
           from: "users",
@@ -153,33 +155,40 @@ const getAllComments = asyncHandler(async (req, res) => {
         },
       },
       {
-        $unwind: "$ownerDetails",
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
-        $project: {
-          content: 1,
+        $addFields: {
           owner: {
             _id: "$ownerDetails._id",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
           },
         },
+      },
+      {
+        $project: {
+          ownerDetails: 0, // Exclude the ownerDetails subdocument
+        },
       }
     );
-    const allComments = await Comment.aggregate(pipeline);
-
-    if (!allComments || allComments.length === 0) {
-      return res
-        .status(400)
-        .json(new ApiResponce(400, [], "comments not available"));
+    //console.log(pipeline);
+    const allComments = Comment.aggregate(pipeline); // do not use await for pagination
+    //console.log("all comments", allComments);
+    const result = await Comment.aggregatePaginate(allComments, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
+    if (!result) {
+      throw new ApiErrorHandler(500, "error while fetching video's Comment");
     }
-    // Provide pagination information in the response
-    const response = new ApiResponce(
-      200,
-      { comments: allComments, totalComments },
-      "Comments fetched successfully"
-    );
-    return res.status(200).json(response);
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, result, "Comments fetched successfully"));
   } catch (error) {
     throw new ApiErrorHandler(
       error?.statusCode || 500,

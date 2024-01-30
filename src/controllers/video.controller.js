@@ -176,6 +176,48 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       }
     );
+    // Add $lookup stage to get total comments for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "video",
+          as: "comments",
+        },
+      },
+      {
+        $addFields: {
+          totalComments: { $size: "$comments" },
+        },
+      },
+      {
+        $project: {
+          comments: 0, // Exclude the comments array from the final output
+        },
+      }
+    );
+    // Add $lookup stage to get total likes for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes",
+        },
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: "$likes" },
+        },
+      },
+      {
+        $project: {
+          likes: 0, // Exclude the comments array from the final output
+        },
+      }
+    );
     const videosAggregate = Video.aggregate(pipeline);
     //console.log(videosAggregate);
     const result = await Video.aggregatePaginate(videosAggregate, {
@@ -251,10 +293,54 @@ const userSpecificVideos = asyncHandler(async (req, res) => {
             avatar: "$ownerDetails.avatar",
           },
         },
+      }
+      // {
+      //   $project: {
+      //     ownerDetails: 0, // Exclude the ownerDetails subdocument
+      //   },
+      // }
+    );
+    // Add $lookup stage to get total comments for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "video",
+          as: "comments",
+        },
+      },
+      {
+        $addFields: {
+          totalComments: { $size: "$comments" },
+        },
+      }
+      // {
+      //   $project: {
+      //     comments: 0, // Exclude the comments array from the final output
+      //   },
+      // }
+    );
+    // Add $lookup stage to get total likes for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes",
+        },
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: "$likes" },
+        },
       },
       {
         $project: {
-          ownerDetails: 0, // Exclude the ownerDetails subdocument
+          likes: 0, // Exclude the comments array from the final output
+          ownerDetails: 0,
+          comments: 0,
         },
       }
     );

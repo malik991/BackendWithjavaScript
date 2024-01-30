@@ -213,23 +213,65 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const userSpecificVideos = asyncHandler(async (req, res) => {
-  // get user Id
-  // check userId present and valid
-  // query to db for specific user id records/docs in videos collection
+  let pipeline = [];
+
   const userId = req.user?._id;
   if (!userId) {
     throw new ApiErrorHandler(404, "User is not authorized or login");
   }
   try {
-    const userVideos = await Video.find({ owner: userId });
-    if (!userVideos || userVideos.length === 0) {
-      return res
-        .status(200)
-        .json(new ApiResponce(200, userVideos, "user do not have any video"));
+    const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+    pipeline.push({
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    });
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        // destruct all docs
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      },
+      {
+        $project: {
+          ownerDetails: 0, // Exclude the ownerDetails subdocument
+        },
+      }
+    );
+    const videosAggregate = Video.aggregate(pipeline);
+    const result = await Video.aggregatePaginate(videosAggregate, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
+    if (!result) {
+      throw new ApiErrorHandler(500, "error while fetching user's videos");
     }
+
     return res
       .status(200)
-      .json(new ApiResponce(200, userVideos, "videos fetched sucessfully"));
+      .json(
+        new ApiResponce(200, result, "User's videos fetched successfully!!")
+      );
   } catch (error) {
     throw new ApiErrorHandler(
       error.statusCode || 500,

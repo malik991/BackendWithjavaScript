@@ -130,14 +130,6 @@ const getAllComments = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(404, "Invalid Video Id");
   }
   try {
-    // const totalComments = await Comment.countDocuments({
-    //   video: new mongoose.Types.ObjectId(videoId),
-    // });
-    // if (totalComments === 0) {
-    //   return res
-    //     .status(200)
-    //     .json(new ApiResponce(200, [], "No comments available for this video"));
-    // }
     let pipeline = [];
     pipeline.push({
       $match: {

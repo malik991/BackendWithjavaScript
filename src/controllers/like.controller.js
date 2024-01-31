@@ -165,4 +165,91 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   }
 });
 
-export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };
+const getLikedByVideoId = asyncHandler(async (req, res) => {
+  //TODO: get all liked videos of a specific video
+  const { videoId } = req.params;
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "Invalid Video Id");
+  }
+  try {
+    let pipeline = [];
+    pipeline.push({
+      $match: {
+        video: new mongoose.Types.ObjectId(videoId),
+      },
+    });
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "likedBy",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$video",
+          totalLikes: { $sum: 1 },
+          // addToSet create an array of owners on the basis of $owner field and find unique owner
+          owners: { $addToSet: "$owner" },
+        },
+      },
+      // {
+      //   $unwind: "$owners",
+      // },
+      {
+        $project: {
+          _id: 1,
+          totalLikes: 1,
+          owners: 1, // now it shows all arrray
+          //owner: { $first: "$owners" }, // in this way it just select the first element
+        },
+      }
+    );
+    const likedDetails = await Like.aggregate(pipeline);
+    if (!likedDetails) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching video likes bt video id"
+      );
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(
+          200,
+          likedDetails,
+          "likes by video Id fetched successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error while fetching likes by video id"
+    );
+  }
+});
+
+export {
+  toggleCommentLike,
+  toggleTweetLike,
+  toggleVideoLike,
+  getLikedVideos,
+  getLikedByVideoId,
+};

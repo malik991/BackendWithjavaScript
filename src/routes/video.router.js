@@ -10,6 +10,7 @@ import {
   deleteVideo,
   getVideoById,
   togglePublishStatus,
+  watchVideo,
 } from "../controllers/video.controller.js";
 
 const router = Router();
@@ -38,6 +39,7 @@ router
 router.route("/user-specific-videos").get(verifyJWT, userSpecificVideos);
 router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo);
 router.route("/get-video/:videoId").get(verifyJWT, getVideoById);
+router.route("/watch-video/:videoId").get(watchVideo);
 router.route("/publish-status/:videoId").patch(verifyJWT, togglePublishStatus);
 
 export default router;

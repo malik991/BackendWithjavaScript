@@ -11,6 +11,7 @@ import {
 } from "../utils/cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import fs from "fs";
+import { getAllComments } from "./comment.controller.js";
 
 const uploadVideo = asyncHandler(async (req, res) => {
   // get the path of video and thumbnail from a form
@@ -584,6 +585,34 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
 });
 
+// increase video views
+const watchVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiErrorHandler(404, "Invalid Video Id");
+  }
+
+  try {
+    const videoViews = await Video.findOneAndUpdate(
+      { _id: videoId },
+      { $inc: { views: 1 } }, // Increment the views count
+      { new: true } // Return the updated document
+    );
+    if (!videoViews) {
+      return res.status(400).json(new ApiResponce(400, [], "Video not found"));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponce(200, videoViews, "Video view updated"));
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error in get user videos"
+    );
+  }
+});
+
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   if (!req.user?._id) {
@@ -623,4 +652,5 @@ export {
   deleteVideo,
   getVideoById,
   togglePublishStatus,
+  watchVideo,
 };

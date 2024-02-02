@@ -22,10 +22,15 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
     if (existingLike) {
       //throw new ApiErrorHandler(400, "User has already liked this video");
-      await Like.deleteOne({ video: videoId });
-      return res
-        .status(200)
-        .json(new ApiResponce(200, [], "video disliked Successfully"));
+      const deletionResult = await Like.deleteOne({
+        video: videoId,
+        likedBy: req.user._id,
+      });
+      if (deletionResult.deletedCount > 0) {
+        return res
+          .status(200)
+          .json(new ApiResponce(200, [], "video disliked Successfully"));
+      }
     }
     const likeDoc = await Like.create({
       video: videoId,

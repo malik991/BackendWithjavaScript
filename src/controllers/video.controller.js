@@ -563,10 +563,10 @@ const getVideoById = asyncHandler(async (req, res) => {
   try {
     //const userVideos = await Video.findOne({ _id: videoId });
     // Use findOneAndUpdate to atomically increment views and get the updated document
-    const userVideo = await Video.findOneAndUpdate(
-      { _id: videoId },
-      { $inc: { views: 1 } }, // Increment the views count
-      { new: true } // Return the updated document
+    const userVideo = await Video.findById(
+      videoId
+      //{ $inc: { views: 1 } }, // Increment the views count
+      //{ new: true } // Return the updated document
     );
     if (!userVideo) {
       return res

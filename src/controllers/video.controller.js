@@ -25,7 +25,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
   let localThumbnailPath;
 
   try {
-    const { title, description } = req.body;
+    const { title, description, isPublished } = req.body;
 
     if (
       req.files &&
@@ -82,6 +82,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
       title: title,
       description,
       duration: duration,
+      isPublished: isPublished,
     });
     //console.log("new video: ", newVideo);
     //console.log("video detail: ", cloudinaryVideoUrl);
@@ -368,7 +369,7 @@ const userSpecificVideos = asyncHandler(async (req, res) => {
 });
 
 const updateTitleAndDescription = asyncHandler(async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, isPublished } = req.body;
   const { videoId } = req.params;
   if (!title || !description) {
     throw new ApiErrorHandler(
@@ -387,6 +388,7 @@ const updateTitleAndDescription = asyncHandler(async (req, res) => {
         $set: {
           title,
           description,
+          isPublished,
         },
       },
       {

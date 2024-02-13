@@ -596,68 +596,84 @@ const getChannelProfile = asyncHandler(async (req, res) => {
 
 // get watch hostory
 const getWatchHistory = asyncHandler(async (req, res) => {
-  // in mongoose when we wrote req.user._id it provide us the mongoDB ID in a string
-  // but in aggregate we need to convert orignal objecId into normal string
-  // coz in aggregate we can't use mongoose
-  const user = await User.aggregate([
-    {
-      $match: {
-        // like this , now we get the user ID
-        _id: new mongoose.Types.ObjectId(req.user?._id),
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const user = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.user?._id),
+        },
       },
-    },
-    {
-      $lookup: {
-        from: "videos",
-        localField: "watchHistory",
-        foreignField: "_id",
-        as: "watchHistory",
-        pipeline: [
-          // this is a nested pipline to find out user data in videos model
-          {
-            $lookup: {
-              from: "users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner", // now again use sub-pipline, coz owner have all fields of users so minus some field
-              pipeline: [
-                {
-                  // now this all data is present in owner field, instead of in main video docs
-                  $project: {
-                    fullName: 1,
-                    userName: 1,
-                    avatar: 1,
+      {
+        $lookup: {
+          from: "videos",
+          localField: "watchHistory",
+          foreignField: "_id",
+          as: "watchHistory",
+          pipeline: [
+            {
+              $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                  {
+                    $project: {
+                      fullName: 1,
+                      userName: 1,
+                      avatar: 1,
+                    },
                   },
-                },
-              ],
-            },
-          },
-          {
-            // now data in Owner field but in form of array and we need [0] value, so just formate it in good way
-            $addFields: {
-              // now get the data from owner field at first position
-              owner: {
-                $first: "$owner",
+                ],
               },
             },
-          },
-        ],
+            {
+              $addFields: {
+                owner: { $first: "$owner" },
+              },
+            },
+          ],
+        },
       },
-    },
-  ]);
-  if (!user?.length) {
-    throw new ApiErrorHandler(404, "watch history not found");
-  }
-  // console.log("User: ", user[0].watchHistory);
-  return res
-    .status(200)
-    .json(
+      {
+        $project: {
+          watchHistoryCount: { $size: "$watchHistory" },
+          docs: {
+            $slice: ["$watchHistory", (page - 1) * limit, limit],
+          },
+        },
+      },
+    ]);
+
+    if (!user || user.length === 0) {
+      throw new ApiErrorHandler(404, "User or watch history not found");
+    }
+
+    const { docs, watchHistoryCount } = user[0];
+
+    const totalPages = Math.ceil(watchHistoryCount / limit);
+
+    return res.status(200).json(
       new ApiResponce(
         200,
-        user[0].watchHistory,
-        "watch history fetched successfully 😊"
+        {
+          docs,
+          totalDocs: watchHistoryCount,
+          totalPages,
+          currentPage: parseInt(page),
+        },
+        "watch history successully fetched"
       )
     );
+  } catch (error) {
+    console.error("Error in get watch history: ", error);
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error.message || "Internal server error"
+    );
+  }
 });
 
 // add to watchhistory

@@ -241,7 +241,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
     */
 
     if (!result) {
-      throw new ApiError(500, "Something went wrong while fetching videos!!");
+      throw new ApiErrorHandler(
+        500,
+        "Something went wrong while fetching videos!!"
+      );
     }
 
     return res

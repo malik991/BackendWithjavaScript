@@ -338,7 +338,7 @@ const updatePassword = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user?._id);
     const isPasswordOk = await user.isPasswordCorrect(oldPassword);
     if (!isPasswordOk) {
-      throw new ApiErrorHandler(401, "password is incorrect");
+      throw new ApiErrorHandler(401, "Old password is incorrect");
     }
     user.password = newPassword;
     await user.save({ validateBeforeSave: false });

@@ -517,6 +517,27 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getChannelProfile = asyncHandler(async (req, res) => {
+  try {
+    //console.log("req cookie", req.cookies);
+    let user = null;
+    const token =
+      req.cookies?.accessToken ||
+      req.header("Authorization")?.replace("Bearer", "");
+    // get the verification from jwt and pass secret key for decoded info
+    if (token) {
+      const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      // use decoded info and hit the DB query
+      user = await User.findById(decodedToken?._id).select(
+        "-password -refreshToken"
+      );
+    }
+
+    // now add a new obj in req
+    req.user = user;
+    //console.log("req user: ", req.user);
+  } catch (error) {
+    throw new ApiErrorHandler(401, error?.message || "Invalid Access Token");
+  }
   // get the channel name or user from URL
   const { username } = req.params;
   if (!username?.trim()) {
@@ -600,13 +621,15 @@ const getChannelProfile = asyncHandler(async (req, res) => {
       $group: {
         _id: null,
         total: { $sum: 1 }, // Count the documents
+        totalViews: { $sum: "$views" },
       },
     },
   ]);
-
+  //console.log("total: ", totalVideos[0]);
   const totalVideoCount = totalVideos.length > 0 ? totalVideos[0].total : 0;
 
   channel[0].totalVideos = totalVideoCount;
+  channel[0].totalViews = totalVideos[0].totalViews;
   if (!channel?.length) {
     throw new ApiErrorHandler(404, "channel does not exists");
   }

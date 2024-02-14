@@ -605,7 +605,7 @@ const getChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  const channelUserId = channel[0]._id;
+  const channelUserId = channel[0]?._id;
   if (!channelUserId) {
     throw new ApiErrorHandler(404, "Channel UserId is not authorized or login");
   }
@@ -625,11 +625,11 @@ const getChannelProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  //console.log("total: ", totalVideos[0]);
   const totalVideoCount = totalVideos.length > 0 ? totalVideos[0].total : 0;
-
+  const totalViewsCount =
+    totalVideos.length > 0 ? totalVideos[0].totalViews : 0;
   channel[0].totalVideos = totalVideoCount;
-  channel[0].totalViews = totalVideos[0].totalViews;
+  channel[0].totalViews = totalViewsCount;
   if (!channel?.length) {
     throw new ApiErrorHandler(404, "channel does not exists");
   }

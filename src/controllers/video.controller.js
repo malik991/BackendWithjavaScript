@@ -169,6 +169,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
             _id: "$ownerDetails._id",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
+            userName: "$ownerDetails.userName",
           },
         },
       },

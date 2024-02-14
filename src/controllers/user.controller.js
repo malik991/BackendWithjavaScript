@@ -1,5 +1,6 @@
 import mongoose, { set } from "mongoose";
 import { User } from "../models/user.model.js";
+import { Video } from "../models/video.model.js";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -518,7 +519,6 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 const getChannelProfile = asyncHandler(async (req, res) => {
   // get the channel name or user from URL
   const { username } = req.params;
-  console.log(username);
   if (!username?.trim()) {
     throw new ApiErrorHandler(404, "username in url does not exist");
   }
@@ -583,8 +583,30 @@ const getChannelProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  //console.log("channel return type: ", channel);
-  // in aggregation return type is an array
+
+  const channelUserId = channel[0]._id;
+  if (!channelUserId) {
+    throw new ApiErrorHandler(404, "Channel UserId is not authorized or login");
+  }
+  // get total video from video
+  const totalVideos = await Video.aggregate([
+    {
+      $match: {
+        owner: channelUserId,
+        isPublished: true,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 }, // Count the documents
+      },
+    },
+  ]);
+
+  const totalVideoCount = totalVideos.length > 0 ? totalVideos[0].total : 0;
+
+  channel[0].totalVideos = totalVideoCount;
   if (!channel?.length) {
     throw new ApiErrorHandler(404, "channel does not exists");
   }

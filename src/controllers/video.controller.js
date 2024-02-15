@@ -297,6 +297,7 @@ const userSpecificVideos = asyncHandler(async (req, res) => {
             _id: "$ownerDetails._id",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
+            userName: "$ownerDetails.userName",
           },
         },
       }
@@ -591,6 +592,116 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
 });
 
+const getVideosByAnyUserId = asyncHandler(async (req, res) => {
+  let pipeline = [];
+
+  const { userId } = req.params;
+  if (!userId) {
+    throw new ApiErrorHandler(404, "Channel/User Id is not valid");
+  }
+  try {
+    const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+    pipeline.push({
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    });
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        // destruct all docs
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+            userName: "$ownerDetails.userName",
+          },
+        },
+      }
+    );
+    // Add $lookup stage to get total comments for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "video",
+          as: "comments",
+        },
+      },
+      {
+        $addFields: {
+          totalComments: { $size: "$comments" },
+        },
+      }
+    );
+    // Add $lookup stage to get total likes for each video
+    pipeline.push(
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes",
+        },
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: "$likes" },
+        },
+      },
+      {
+        $project: {
+          likes: 0, // Exclude the comments array from the final output
+          ownerDetails: 0,
+          comments: 0,
+        },
+      }
+    );
+    const videosAggregate = Video.aggregate(pipeline);
+    const result = await Video.aggregatePaginate(videosAggregate, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
+    if (!result) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching ANy User's/Channel Id videos"
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(
+          200,
+          result,
+          "user/channel videos fetched successfully! 😊"
+        )
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message || "internal server error in get user videos"
+    );
+  }
+});
+
 // increase video views
 const watchVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
@@ -659,4 +770,5 @@ export {
   getVideoById,
   togglePublishStatus,
   watchVideo,
+  getVideosByAnyUserId,
 };

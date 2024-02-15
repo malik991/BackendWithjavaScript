@@ -11,11 +11,13 @@ import {
   getVideoById,
   togglePublishStatus,
   watchVideo,
+  getVideosByAnyUserId,
 } from "../controllers/video.controller.js";
 
 const router = Router();
 
 router.route("/get-all-videos").get(getAllVideos);
+router.route("/get-channel-videos/:userId").get(getVideosByAnyUserId);
 router.route("/upload-video").post(
   verifyJWT,
   upload.fields([

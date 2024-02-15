@@ -36,6 +36,9 @@ const toggledSubscription = asyncHandler(async (req, res) => {
         channel: findChannel._id,
         subscriber: new mongoose.Types.ObjectId(req.user._id),
       });
+      return res
+        .status(200)
+        .json(new ApiResponce(200, {}, "Unsubscribed Successfully"));
     }
 
     // new subscriber

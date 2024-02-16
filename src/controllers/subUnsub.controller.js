@@ -65,7 +65,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(404, "channel id does not exist, Invalid Id");
   }
   try {
-    const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+    const { page = 1, limit = 4, query, sortBy, sortType } = req.query;
     pipeline.push({
       $match: {
         channel: new mongoose.Types.ObjectId(channelId),

@@ -11,7 +11,7 @@ import {
 } from "../utils/cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import fs from "fs";
-import { getAllComments } from "./comment.controller.js";
+//import { getAllComments } from "./comment.controller.js";
 
 const uploadVideo = asyncHandler(async (req, res) => {
   // get the path of video and thumbnail from a form

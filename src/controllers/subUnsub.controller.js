@@ -60,24 +60,73 @@ const toggledSubscription = asyncHandler(async (req, res) => {
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
+  let pipeline = [];
   if (!channelId || !mongoose.Types.ObjectId.isValid(channelId)) {
     throw new ApiErrorHandler(404, "channel id does not exist, Invalid Id");
   }
   try {
-    const getSubscribersList = await Subscription.find({ channel: channelId });
-    if (!getSubscribersList || getSubscribersList.length === 0) {
-      return res
-        .status(200)
-        .json(new ApiResponce(200, getSubscribersList || [], "No subscriber"));
+    const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+    pipeline.push({
+      $match: {
+        channel: new mongoose.Types.ObjectId(channelId),
+      },
+    });
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "subscriber",
+          foreignField: "_id",
+          as: "subscriberDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$subscriberDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          subscriber: {
+            _id: "$subscriberDetails._id",
+            fullName: "$subscriberDetails.fullName",
+            avatar: "$subscriberDetails.avatar",
+            userName: "$subscriberDetails.userName",
+          },
+        },
+      },
+      {
+        $project: {
+          subscriberDetails: 0,
+        },
+      }
+    );
+
+    ///////////////////////////////////////////////
+    //const getSubscribersList = await Subscription.find({ channel: channelId });
+    const getSubscribersListAggregate = Subscription.aggregate(pipeline);
+    if (!getSubscribersListAggregate) {
+      return res.status(200).json(new ApiResponce(200, [], "No subscriber"));
+    }
+    const result = await Subscription.aggregatePaginate(
+      getSubscribersListAggregate,
+      {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      }
+    );
+    if (!result) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching subscriber of a channel."
+      );
     }
     return res
       .status(200)
       .json(
-        new ApiResponce(
-          200,
-          getSubscribersList,
-          "Subscribers list fetched successfully"
-        )
+        new ApiResponce(200, result, "Subscribers list fetched successfully")
       );
   } catch (error) {
     throw new ApiErrorHandler(

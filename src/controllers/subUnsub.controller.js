@@ -71,7 +71,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         channel: new mongoose.Types.ObjectId(channelId),
       },
     });
-
+    pipeline.push({ $sort: { createdAt: -1 } });
     pipeline.push(
       {
         $lookup: {
@@ -103,9 +103,6 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         },
       }
     );
-
-    ///////////////////////////////////////////////
-    //const getSubscribersList = await Subscription.find({ channel: channelId });
     const getSubscribersListAggregate = Subscription.aggregate(pipeline);
     if (!getSubscribersListAggregate) {
       return res.status(200).json(new ApiResponce(200, [], "No subscriber"));

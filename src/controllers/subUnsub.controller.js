@@ -135,37 +135,77 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 // controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
   const { subscriberId } = req.params;
+  let pipeline = [];
   if (!subscriberId || !mongoose.Types.ObjectId.isValid(subscriberId)) {
     throw new ApiErrorHandler(404, "subscriber does not exist");
   }
   try {
-    const getChannelList = await Subscription.find({
-      subscriber: subscriberId,
+    const { page = 1, limit = 4, query, sortBy, sortType } = req.query;
+    pipeline.push({
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(subscriberId),
+      },
     });
-    if (!getChannelList || getChannelList.length === 0) {
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "channel",
+          foreignField: "_id",
+          as: "ChannelDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ChannelDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          subscriber: {
+            _id: "$ChannelDetails._id",
+            fullName: "$ChannelDetails.fullName",
+            avatar: "$ChannelDetails.avatar",
+            userName: "$ChannelDetails.userName",
+          },
+        },
+      },
+      {
+        $project: {
+          ChannelDetails: 0,
+        },
+      }
+    );
+    const getSubscribedChannelListAggregate = Subscription.aggregate(pipeline);
+    if (!getSubscribedChannelListAggregate) {
       return res
         .status(200)
-        .json(
-          new ApiResponce(
-            200,
-            getChannelList || [],
-            "User do not subscribe any channel"
-          )
-        );
+        .json(new ApiResponce(200, [], "No subscribed channel"));
+    }
+    const result = await Subscription.aggregatePaginate(
+      getSubscribedChannelListAggregate,
+      {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      }
+    );
+    if (!result) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching channel list from subscribedTo."
+      );
     }
     return res
       .status(200)
       .json(
-        new ApiResponce(
-          200,
-          getChannelList,
-          "channel list fetched successfully"
-        )
+        new ApiResponce(200, result, "Subscribers list fetched successfully")
       );
   } catch (error) {
     error.statusCode || 500,
       error?.message ||
-        "internal server error while fetching a subscriber by Id";
+        "internal server error while fetching a subscribed channel by subscriber Id";
   }
 });
 export {
@@ -174,7 +214,6 @@ export {
   getSubscribedChannels,
 };
 
-// const unsubscribeFromChannel = asyncHandler(async (req, res) => {
 //   const { channelUserName } = req.params;
 //   // console.log("hello subscribeToChannel: ", channelUserName);
 //   if (!channelUserName || !channelUserName.trim()) {

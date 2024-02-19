@@ -49,7 +49,7 @@ router.route("/login").post(upload.none(), loginUser);
 
 /// ********** users controller routes ******************
 router.route("/logout").get(verifyJWT, logoutUser);
-router.route("/new-token").post(getRefreshAccessToken);
+router.route("/new-access-token").get(getRefreshAccessToken);
 router.route("/change-password").post(verifyJWT, upload.none(), updatePassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 router

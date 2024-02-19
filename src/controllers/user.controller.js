@@ -290,7 +290,10 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const getRefreshAccessToken = asyncHandler(async (req, res) => {
   // get token from user to provide again him access
-  const tokenReceiveFromUser = req.cookie.refreshToken || req.body.refreshToken;
+  // console.log("cookie: ", req.cookies);
+  const tokenReceiveFromUser =
+    req.cookies.refreshToken || req.body.refreshToken;
+  //console.log("get refresh: ", tokenReceiveFromUser);
   if (!tokenReceiveFromUser) {
     throw new ApiErrorHandler(401, "Invalid Token from user");
   }
@@ -300,6 +303,7 @@ const getRefreshAccessToken = asyncHandler(async (req, res) => {
       tokenReceiveFromUser,
       process.env.REFRESH_TOKEN_SECRET
     );
+    //console.log("decode: ", decodedToken);
     // now we hv raw token, match with refresh token store in DB
     const userAndRefreshTokenDb = await User.findById(decodedToken?._id);
     if (!userAndRefreshTokenDb) {

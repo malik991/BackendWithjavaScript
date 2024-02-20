@@ -11,6 +11,16 @@ const playlistSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    coverImage: {
+      type: String, // cloudiner URL
+    },
+    coverImagePublicId: {
+      type: String, // cloudinary public_id
+    },
+    isPublished: {
+      type: Boolean,
+      default: true,
+    },
     videos: [
       {
         type: Schema.Types.ObjectId,

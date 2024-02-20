@@ -3,22 +3,29 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponce } from "../utils/ApiResponse.js";
 import { Playlist } from "../models/playlist.model.js";
 import mongoose from "mongoose";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
-  // take name , desc from body
-  // check null or empty
-  // get user from req.user
-  // check user exxist or not
-  // create a playlist into mongodb within try catch
-
-  const { name, description } = req.body;
+  let localcoverImagePath;
+  const { name, description, isPublished } = req.body;
   if (!name) {
     throw new ApiErrorHandler(400, "PlayList name is mendatory");
   }
   if (!req.user?._id) {
     throw new ApiErrorHandler(400, "user not found to create playlist");
   }
+
   try {
+    // if (!req.file || Object.keys(req.file).length === 0) {
+    //   throw new ApiErrorHandler(
+    //     404,
+    //     "please select the coverImage picture for playlist"
+    //   );
+    // }
+    localcoverImagePath = req.file?.path;
     // check playlist name already exist or not
     const PlaylistExist = await Playlist.findOne({
       owner: req.user._id,
@@ -30,10 +37,23 @@ const createPlaylist = asyncHandler(async (req, res) => {
         "play list already exit. please choose another name"
       );
     }
+    const cloudinarycoverImageUrl =
+      localcoverImagePath && (await uploadOnCloudinary(localcoverImagePath));
+    if (localcoverImagePath && !cloudinarycoverImageUrl) {
+      throw new ApiErrorHandler(
+        500,
+        "Error while uploading the cover image of playlist on cloudinary, please try again"
+      );
+    }
+    //console.log("cloudniary url: ", cloudinarycoverImageUrl);
+    //const coverImagePublicId = cloudinarycoverImageUrl?.public_id;
     const newPlayList = await Playlist.create({
       name,
       description,
       owner: new mongoose.Types.ObjectId(req.user._id),
+      coverImage: cloudinarycoverImageUrl?.url || "",
+      coverImagePublicId: cloudinarycoverImageUrl?.public_id || "",
+      isPublished,
     });
     return res
       .status(200)
@@ -43,6 +63,11 @@ const createPlaylist = asyncHandler(async (req, res) => {
       error.statusCode || 500,
       error?.message || "internal server error while creating playlist"
     );
+  } finally {
+    if (localcoverImagePath && fs.existsSync(localcoverImagePath)) {
+      //console.log("enter in finally if condition");
+      fs.unlinkSync(localcoverImagePath);
+    }
   }
 });
 
@@ -208,9 +233,22 @@ const deletePlaylist = asyncHandler(async (req, res) => {
       },
       { new: true }
     );
+
     if (!playlistExist) {
       throw new ApiErrorHandler(400, "playlist not exist or Unauthorized user");
     }
+    if (playlistExist.coverImagePublicId) {
+      const { deleteImageResponse } = await deleteFromCloudinary([
+        playlistExist.coverImagePublicId,
+      ]);
+      if (!deleteImageResponse) {
+        throw new ApiErrorHandler(
+          "500",
+          "Eror while delteing covernImage from cloudinary, please try again"
+        );
+      }
+    }
+
     return res
       .status(200)
       .json(new ApiResponce(200, null, "Playlist deleted successfully "));

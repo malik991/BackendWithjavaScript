@@ -15,7 +15,7 @@ const router = Router();
 
 router
   .route("/create-play-list")
-  .post(verifyJWT, upload.none(), createPlaylist);
+  .post(verifyJWT, upload.single("coverImage"), createPlaylist);
 router
   .route("/update-playlist/:playlistId")
   .post(verifyJWT, upload.none(), updatePlaylist);

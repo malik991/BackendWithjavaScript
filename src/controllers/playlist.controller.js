@@ -196,18 +196,68 @@ const checkUserPlaylists = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     throw new ApiErrorHandler(400, "user not exist, please login");
   }
+  let pipeline = [];
   try {
-    const getPlaylists = await Playlist.find({ owner: req.user?._id });
-    if (!getPlaylists || getPlaylists.length === 0) {
-      return res
-        .status(200)
-        .json(new ApiResponce(200, {}, "playlist not found, please create"));
+    const { page = 1, limit = 3, query, sortBy, sortType } = req.query;
+    pipeline.push(
+      {
+        $match: {
+          owner: new mongoose.Types.ObjectId(req.user?._id),
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+            userName: "$ownerDetails.userName",
+          },
+        },
+      },
+      {
+        $project: {
+          ownerDetails: 0,
+        },
+      }
+    );
+    //const getPlaylists = await Playlist.find({ owner: req.user?._id });
+    const getPlaylistsAggregate = Playlist.aggregate(pipeline);
+    const result = await Playlist.aggregatePaginate(getPlaylistsAggregate, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
+    if (!result) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching playlists of logged in user"
+      );
     }
+    // if (!getPlaylists || getPlaylists.length === 0) {
+    //   return res
+    //     .status(200)
+    //     .json(new ApiResponce(200, {}, "playlist not found, please create"));
+    // }
     return res
       .status(200)
-      .json(
-        new ApiResponce(200, getPlaylists, "Playlists retrieved successfully")
-      );
+      .json(new ApiResponce(200, result, "Playlists retrieved successfully"));
   } catch (error) {
     throw new ApiErrorHandler(
       error?.statusCode || 500,

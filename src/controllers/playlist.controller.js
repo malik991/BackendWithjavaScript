@@ -233,8 +233,58 @@ const checkUserPlaylists = asyncHandler(async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "videos",
+          localField: "videos",
+          foreignField: "_id",
+          as: "videoDetails",
+        },
+      },
+      {
+        $addFields: {
+          videos: {
+            $map: {
+              input: "$videos",
+              as: "videoId",
+              in: {
+                $let: {
+                  vars: {
+                    videoDoc: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$videoDetails",
+                            cond: { $eq: ["$$this._id", "$$videoId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  in: {
+                    _id: "$$videoDoc._id",
+                    title: "$$videoDoc.title",
+                    description: "$$videoDoc.description",
+                    duration: "$$videoDoc.duration",
+                    views: "$$videoDoc.views",
+                    videoFile: "$$videoDoc.videoFile",
+                    thumbNail: "$$videoDoc.thumbNail",
+                    // Add other selected fields from the videos object here
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
         $project: {
-          ownerDetails: 0,
+          _id: 1,
+          name: 1,
+          description: 1,
+          coverImage: 1,
+          owner: 1,
+          videos: 1,
         },
       }
     );

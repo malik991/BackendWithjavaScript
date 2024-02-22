@@ -7,6 +7,7 @@ import {
   uploadOnCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
+import fs from "fs";
 
 const createPlaylist = asyncHandler(async (req, res) => {
   let localcoverImagePath;
@@ -64,8 +65,8 @@ const createPlaylist = asyncHandler(async (req, res) => {
       error?.message || "internal server error while creating playlist"
     );
   } finally {
-    if (localcoverImagePath && fs.existsSync(localcoverImagePath)) {
-      //console.log("enter in finally if condition");
+    if (localcoverImagePath) {
+      console.log("enter in finally if condition");
       fs.unlinkSync(localcoverImagePath);
     }
   }

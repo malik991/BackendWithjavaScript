@@ -20,6 +20,14 @@ class ApiErrorHandler extends Error {
       Error.captureStackTrace(this, this.constructor);
     }
   }
+  // Method to send JSON response
+  sendJsonResponse(res) {
+    res.status(this.statusCode).json({
+      success: this.success,
+      message: this.message,
+      errors: this.errors,
+    });
+  }
 }
 
 export { ApiErrorHandler };

@@ -12,19 +12,11 @@ app.use(
     credentials: true,
   })
 );
-// app.use(
-//   cors({
-//     origin: "http://localhost:5173",
-//     methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
-//     credentials: true,
-//   })
-// );
 
 // allow json, and set limit of json, like data receive from forms
 app.use(express.json({ limit: "16kb" }));
 // get the data from URL. extended mean you can play with nested objects
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
-
 // setup session middleware
 // app.use(
 //   session({
@@ -50,6 +42,7 @@ import likeRouter from "./routes/like.router.js";
 import tweetRouter from "./routes/tweet.router.js";
 import dashboardRouter from "./routes/dashboard.router.js";
 import healthCheckRouter from "./routes/healthCheck.router.js";
+import { ApiErrorHandler } from "./utils/ApiErrorHandler.js";
 
 // routes declration , now we use middleware instead of app.get/post , coz we declrae our router separatly
 app.use("/api/v1/users", userRouter);
@@ -62,6 +55,22 @@ app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/healthCheck", healthCheckRouter);
 
 //http://localhost:8000/api/v1/users/register or login
+
+// Error handler
+app.use((err, req, res, next) => {
+  if (err instanceof ApiErrorHandler) {
+    err.sendJsonResponse(res); // Send JSON response using ApiErrorHandler method
+  }
+  //  else {
+  //   // Handle other errors
+  //   console.log("handle other error ");
+  //   res.status(500).json({
+  //     success: false,
+  //     message: "Internal Server Error app",
+  //     errors: err,
+  //   });
+  // }
+});
 
 // just another way like default
 export { app };

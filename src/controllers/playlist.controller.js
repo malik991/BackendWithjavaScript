@@ -20,12 +20,6 @@ const createPlaylist = asyncHandler(async (req, res) => {
   }
 
   try {
-    // if (!req.file || Object.keys(req.file).length === 0) {
-    //   throw new ApiErrorHandler(
-    //     404,
-    //     "please select the coverImage picture for playlist"
-    //   );
-    // }
     localcoverImagePath = req.file?.path;
     // check playlist name already exist or not
     const PlaylistExist = await Playlist.findOne({
@@ -33,6 +27,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
       name,
     });
     if (PlaylistExist) {
+      //console.log("Error object type:", typeof error);
       throw new ApiErrorHandler(
         404,
         "play list already exit. please choose another name"
@@ -47,6 +42,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
       );
     }
     //console.log("cloudniary url: ", cloudinarycoverImageUrl);
+    //console.log("all parameters: ", name, description, isPublished);
     //const coverImagePublicId = cloudinarycoverImageUrl?.public_id;
     const newPlayList = await Playlist.create({
       name,
@@ -66,7 +62,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
     );
   } finally {
     if (localcoverImagePath) {
-      console.log("enter in finally if condition");
+      //console.log("enter in finally if condition");
       fs.unlinkSync(localcoverImagePath);
     }
   }

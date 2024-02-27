@@ -18,7 +18,7 @@ router
   .post(verifyJWT, upload.single("coverImage"), createPlaylist);
 router
   .route("/update-playlist/:playlistId")
-  .post(verifyJWT, upload.none(), updatePlaylist);
+  .post(verifyJWT, upload.single("coverImage"), updatePlaylist);
 router
   .route("/add-video-into-playlist/:videoId/:playlistId")
   .post(verifyJWT, addVideoIntoPlaylist);

@@ -69,8 +69,9 @@ const createPlaylist = asyncHandler(async (req, res) => {
 });
 
 const updatePlaylist = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, isPublished } = req.body;
   const { playlistId } = req.params;
+  let localcoverImagePath;
   if (!name) {
     throw new ApiErrorHandler(400, "PlayList name is mendatory");
   }
@@ -81,34 +82,62 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     throw new ApiErrorHandler(400, "user not found to update playlist");
   }
   try {
-    // check playlist ownership
-    /*const existingPlaylist = await Playlist.findById(playlistId);
-    if (!existingPlaylist) {
-      throw new ApiErrorHandler(404, "play list not exit");
-    }
-    if (existingPlaylist.owner.toString() !== req.user?._id.toString()) {
-      throw new ApiErrorHandler(
-        403,
-        "Unauthorized: User does not own this playlist"
-      );
-    }*/
+    localcoverImagePath = req.file?.path;
+    //console.log("local image: ", localcoverImagePath);
 
     // Check if the new name is already used by another playlist
-    const existingPlaylist = await Playlist.findOne({
+    const existingPlaylistQuery = {
       name: name,
       owner: req.user?._id,
-      _id: { $ne: playlistId }, // ne: not equal, Exclude the current playlist being updated
-    });
+      _id: { $ne: playlistId }, // Exclude the current playlist being updated
+    };
 
+    const resultQuery = {
+      _id: playlistId,
+      owner: req.user?._id,
+    };
+
+    const [existingPlaylist, result] = await Promise.all([
+      Playlist.findOne(existingPlaylistQuery),
+      Playlist.findOne(resultQuery),
+    ]);
     if (existingPlaylist) {
-      throw new ApiErrorHandler(400, "Playlist name already exists");
+      throw new ApiErrorHandler(400, "Playlist name already exist 🙄");
     }
+
+    if (localcoverImagePath) {
+      const { deleteImageResponse } = await deleteFromCloudinary([
+        result.coverImagePublicId,
+      ]);
+      if (!deleteImageResponse) {
+        throw new ApiErrorHandler(
+          "500",
+          "Problem while delteing file from cloudinary, please try again"
+        );
+      }
+    }
+
+    const cloudinarycoverImageUrl =
+      localcoverImagePath && (await uploadOnCloudinary(localcoverImagePath));
+    if (localcoverImagePath && !cloudinarycoverImageUrl) {
+      throw new ApiErrorHandler(
+        500,
+        "Error while update the cover image of playlist on cloudinary, please try again"
+      );
+    }
+
     const playListObj = await Playlist.findOneAndUpdate(
       { _id: playlistId, owner: req.user?._id },
       {
         $set: {
           name,
           description,
+          isPublished,
+          // Conditionally set coverImage and coverImagePublicId based on cloudinarycoverImageUrl
+          ...(cloudinarycoverImageUrl && {
+            coverImage: cloudinarycoverImageUrl.url,
+            coverImagePublicId: cloudinarycoverImageUrl.public_id,
+          }),
         },
       },
       { new: true }
@@ -128,6 +157,11 @@ const updatePlaylist = asyncHandler(async (req, res) => {
       error.statusCode || 500,
       error?.message || "internal server error while updating playlist"
     );
+  } finally {
+    if (localcoverImagePath && fs.existsSync(localcoverImagePath)) {
+      console.log("enter in finally");
+      fs.unlinkSync(localcoverImagePath);
+    }
   }
 });
 
@@ -158,7 +192,7 @@ const addVideoIntoPlaylist = asyncHandler(async (req, res) => {
       videos: { $in: [videoId] },
     });
     if (checkVideoExist) {
-      throw new ApiErrorHandler(404, "video already exist");
+      throw new ApiErrorHandler(404, "video already exist in your play list");
     }
     const updatePlayList = await Playlist.findOneAndUpdate(
       {
@@ -280,6 +314,7 @@ const checkUserPlaylists = asyncHandler(async (req, res) => {
           name: 1,
           description: 1,
           coverImage: 1,
+          isPublished: 1,
           owner: 1,
           videos: 1,
         },

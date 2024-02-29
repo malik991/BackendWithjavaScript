@@ -51,5 +51,7 @@ const videoSchema = new mongoose.Schema(
 // which boost the power of our query execution on advance level
 // plugin is just a hook like pre hook for schema from mongoose
 videoSchema.plugin(mongooseAggregate);
+// Create text index for title and description fields
+videoSchema.index({ title: "text", description: "text" });
 
 export const Video = mongoose.model("Video", videoSchema);

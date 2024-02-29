@@ -117,11 +117,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
     if (query) {
       console.log(query);
       pipeline.push({
-        $search: {
-          index: "search-videos",
-          text: {
-            query: query,
-            path: ["title", "description"],
+        $match: {
+          $text: {
+            $search: `"${query}"`, // to match the exact pharase
+            //$search: query, // to match the word with or condition
           },
         },
       });
@@ -147,6 +146,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     } else {
       pipeline.push({ $sort: { createdAt: -1 } });
     }
+
     pipeline.push(
       {
         $lookup: {
@@ -221,13 +221,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       }
     );
+    //console.log("pipe: ", pipeline);
     const videosAggregate = Video.aggregate(pipeline);
     //console.log(videosAggregate);
     const result = await Video.aggregatePaginate(videosAggregate, {
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
     });
-    // console.log(result);
+    //console.log("result: ", result);
     /* return result will be type of below
   
       result.docs

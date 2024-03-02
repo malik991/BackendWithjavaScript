@@ -115,7 +115,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     let pipeline = [];
 
     if (query) {
-      console.log(query);
+      //console.log(query);
       pipeline.push({
         $match: {
           $text: {
@@ -135,12 +135,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
     }
 
     pipeline.push({ $match: { isPublished: true } });
-
-    if (sortBy && sortType) {
-      //console.log(sortBy, sortType);
+    // console.log(typeof sortType);
+    if (sortBy !== undefined && sortType !== undefined) {
+      // console.log("enter");
+      const checkSortType = JSON.parse(sortType);
+      const sortOrder = checkSortType ? 1 : -1;
       pipeline.push({
         $sort: {
-          [sortBy]: sortType === "asc" ? 1 : -1,
+          [sortBy]: sortOrder,
         },
       });
     } else {

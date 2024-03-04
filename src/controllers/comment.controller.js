@@ -20,7 +20,14 @@ const addComment = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     throw new ApiErrorHandler(401, "user not found, please login");
   }
+  let pipeline = [];
   try {
+    pipeline.push({
+      $match: {
+        video: new mongoose.Types.ObjectId(videoId),
+      },
+    });
+
     const newComment = await Comment.create({
       content,
       video: videoId,
@@ -29,9 +36,54 @@ const addComment = asyncHandler(async (req, res) => {
     if (!newComment) {
       throw new ApiErrorHandler(404, "comment not added, please try again");
     }
+    pipeline = [
+      {
+        $match: {
+          _id: newComment._id,
+          owner: newComment.owner,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      },
+      {
+        $project: {
+          ownerDetails: 0, // Exclude the ownerDetails subdocument
+        },
+      },
+    ];
+
+    const newCommentAndOwnerDetail = await Comment.aggregate(pipeline);
+
     return res
       .status(200)
-      .json(new ApiResponce(200, newComment, "comment added successfully"));
+      .json(
+        new ApiResponce(
+          200,
+          newCommentAndOwnerDetail,
+          "comment added successfully"
+        )
+      );
   } catch (error) {
     throw new ApiErrorHandler(
       error?.statusCode || 500,

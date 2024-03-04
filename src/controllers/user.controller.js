@@ -290,7 +290,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const getRefreshAccessToken = asyncHandler(async (req, res) => {
   // get token from user to provide again him access
-  console.log("cookie: ", req.cookies);
+  //console.log("cookie: ", req.cookies);
   const tokenReceiveFromUser =
     req.cookies.refreshToken || req.body.refreshToken;
   //console.log("get refresh: ", tokenReceiveFromUser);

@@ -61,6 +61,7 @@ const addComment = asyncHandler(async (req, res) => {
         $addFields: {
           owner: {
             _id: "$ownerDetails._id",
+            userName: "$ownerDetails.userName",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
           },
@@ -189,6 +190,8 @@ const getAllComments = asyncHandler(async (req, res) => {
       },
     });
 
+    pipeline.push({ $sort: { createdAt: -1 } });
+
     pipeline.push(
       {
         $lookup: {
@@ -208,6 +211,7 @@ const getAllComments = asyncHandler(async (req, res) => {
         $addFields: {
           owner: {
             _id: "$ownerDetails._id",
+            userName: "$ownerDetails.userName",
             fullName: "$ownerDetails.fullName",
             avatar: "$ownerDetails.avatar",
           },

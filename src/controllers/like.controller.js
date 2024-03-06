@@ -69,10 +69,15 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
     if (existingLike) {
       //throw new ApiErrorHandler(400, "User has already liked this video");
-      await Like.deleteOne({ comment: commentId });
-      return res
-        .status(200)
-        .json(new ApiResponce(200, [], "comment disliked Successfully"));
+      const delRes = await Like.deleteOne({
+        comment: commentId,
+        likedBy: req.user._id,
+      });
+      if (delRes.deletedCount > 0) {
+        return res
+          .status(200)
+          .json(new ApiResponce(200, {}, "comment disliked Successfully"));
+      }
     }
     const likeDoc = await Like.create({
       comment: commentId,
@@ -250,6 +255,87 @@ const getLikedByVideoId = asyncHandler(async (req, res) => {
     );
   }
 });
+const getTotalLikesByCommentId = asyncHandler(async (req, res) => {
+  //TODO: get all liked videos of a specific video
+  const { contentId } = req.params;
+  if (!contentId || !mongoose.Types.ObjectId.isValid(contentId)) {
+    throw new ApiErrorHandler(404, "Invalid comment Id");
+  }
+  try {
+    let pipeline = [];
+    pipeline.push({
+      $match: {
+        comment: new mongoose.Types.ObjectId(contentId),
+      },
+    });
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "likedBy",
+          foreignField: "_id",
+          as: "ownerDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$ownerDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            _id: "$ownerDetails._id",
+            fullName: "$ownerDetails.fullName",
+            avatar: "$ownerDetails.avatar",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$comment",
+          totalLikes: { $sum: 1 },
+          // addToSet create an array of owners on the basis of $owner field and find unique owner
+          owners: { $addToSet: "$owner" },
+        },
+      },
+      // {
+      //   $unwind: "$owners",
+      // },
+      {
+        $project: {
+          _id: 1,
+          totalLikes: 1,
+          owners: 1, // now it shows all arrray
+          //owner: { $first: "$owners" }, // in this way it just select the first element
+        },
+      }
+    );
+    const likedDetails = await Like.aggregate(pipeline);
+    if (!likedDetails) {
+      throw new ApiErrorHandler(
+        500,
+        "error while fetching comments likes by comment id"
+      );
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponce(
+          200,
+          likedDetails,
+          "Total likes by comment Id fetched successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiErrorHandler(
+      error.statusCode || 500,
+      error?.message ||
+        "internal server error while fetching likes by comment id"
+    );
+  }
+});
 
 export {
   toggleCommentLike,
@@ -257,4 +343,5 @@ export {
   toggleVideoLike,
   getLikedVideos,
   getLikedByVideoId,
+  getTotalLikesByCommentId,
 };

@@ -6,10 +6,14 @@ import {
   getLikedVideos,
   toggleTweetLike,
   getLikedByVideoId,
+  getTotalLikesByCommentId,
 } from "../controllers/like.controller.js";
 
 const router = Router();
 router.route("/liked-videos-by-videoId/v/:videoId").get(getLikedByVideoId);
+router
+  .route("/liked-comments-by-commentId/:contentId")
+  .get(getTotalLikesByCommentId);
 router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
 
 router.route("/toggle/v/:videoId").post(toggleVideoLike);

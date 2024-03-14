@@ -41,8 +41,6 @@ const generateAccessAndRefreshToken = async (userID) => {
 
 // register user
 const registerUser = asyncHandler(async (req, res) => {
-  // 1: get the values from form
-  //console.log("req . body: ", req.body);
   let avatarLocalfilePath;
   let coverImgLocalPath;
   try {
@@ -66,7 +64,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!avatarLocalfilePath) {
       throw new ApiErrorHandler(400, "Avatar is mendatory!");
     }
-
+    //console.log(avatarLocalfilePath, coverImgLocalPath);
     // 2: neccessary checks if null or empty
     // ---- here we check all fields are empty or not ? with some method of JS
     if (
@@ -108,7 +106,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // --- cus we inject our middleware multer in routes , so like req.body give us some
     // ---- function by express, so multer provide us req.files , access of all files from req objec
-    //console.log(req.files);
 
     const cloudinaryAvatarUrl = await uploadOnCloudinary(avatarLocalfilePath);
     const cloudinaryCoverImgUrl = await uploadOnCloudinary(coverImgLocalPath);
@@ -131,6 +128,7 @@ const registerUser = asyncHandler(async (req, res) => {
       avatarPublicId: cloudinaryAvatarUrl?.public_id || "",
       coverImagePublicId: cloudinaryCoverImgUrl?.public_id || "",
     });
+
     //  when user create mnogo db send back all entries in responce , so remove pwd and refresh tokan
     // check user is created or not if yes than use select method to minus the password
     // in select methods -(-ve) mean no need, for other property use " " (space) and write
@@ -149,15 +147,19 @@ const registerUser = asyncHandler(async (req, res) => {
       .json(
         new ApiResponce(200, checkUserCreated, "user created Successfully.😊")
       );
-  } finally {
-    //console.log("finall run", avatarLocalfilePath, coverImgLocalPath);
-    if (avatarLocalfilePath && fs.existsSync(avatarLocalfilePath)) {
-      fs.unlinkSync(avatarLocalfilePath);
-    }
-    if (coverImgLocalPath && fs.existsSync(coverImgLocalPath)) {
-      fs.unlinkSync(coverImgLocalPath);
-    }
+  } catch (error) {
+    console.log("Error in register user", error);
+    throw new ApiErrorHandler(500, error?.message);
   }
+  // finally {
+  //   console.log("finall run", avatarLocalfilePath, coverImgLocalPath);
+  //   if (avatarLocalfilePath && fs.existsSync(avatarLocalfilePath)) {
+  //     fs.unlinkSync(avatarLocalfilePath);
+  //   }
+  //   if (coverImgLocalPath) {
+  //     fs.unlinkSync(coverImgLocalPath);
+  //   }
+  // }
 
   // ---------------------------------------------- ///
   // just for testing of api on postman

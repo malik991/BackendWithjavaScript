@@ -58,18 +58,11 @@ app.use("/api/v1/healthCheck", healthCheckRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
+  // console.log("erro occured");
   if (err instanceof ApiErrorHandler) {
+    //console.log("api errror handler object");
     err.sendJsonResponse(res); // Send JSON response using ApiErrorHandler method
   }
-  //  else {
-  //   // Handle other errors
-  //   console.log("handle other error ");
-  //   res.status(500).json({
-  //     success: false,
-  //     message: "Internal Server Error app",
-  //     errors: err,
-  //   });
-  // }
 });
 
 // just another way like default

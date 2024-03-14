@@ -1,6 +1,10 @@
 import { Router } from "express";
-import { upload } from "../middlewares/multer.middleware.js";
+import {
+  upload,
+  checkFileTypeAndSize,
+} from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { cleanupFilesOnError } from "../middlewares/cleanupFilesOnError.middleware.js";
 import {
   createPlaylist,
   updatePlaylist,
@@ -13,12 +17,36 @@ import {
 
 const router = Router();
 
-router
-  .route("/create-play-list")
-  .post(verifyJWT, upload.single("coverImage"), createPlaylist);
-router
-  .route("/update-playlist/:playlistId")
-  .post(verifyJWT, upload.single("coverImage"), updatePlaylist);
+router.route("/create-play-list").post(
+  verifyJWT,
+  upload.single("coverImage"),
+  (req, res, next) => {
+    req.coverImgLocalPath =
+      req.file && req.file.fieldname === "coverImage"
+        ? req.file.path // Wrap the file path in an object to maintain consistency
+        : null;
+    req.avatarLocalfilePath = null;
+    next();
+  },
+  checkFileTypeAndSize,
+  createPlaylist,
+  cleanupFilesOnError
+);
+router.route("/update-playlist/:playlistId").post(
+  verifyJWT,
+  upload.single("coverImage"),
+  (req, res, next) => {
+    req.coverImgLocalPath =
+      req.file && req.file.fieldname === "coverImage"
+        ? req.file.path // Wrap the file path in an object to maintain consistency
+        : null;
+    req.avatarLocalfilePath = null;
+    next();
+  },
+  checkFileTypeAndSize,
+  updatePlaylist,
+  cleanupFilesOnError
+);
 router
   .route("/add-video-into-playlist/:videoId/:playlistId")
   .post(verifyJWT, addVideoIntoPlaylist);

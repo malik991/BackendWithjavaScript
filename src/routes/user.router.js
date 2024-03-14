@@ -21,8 +21,12 @@ import {
   //unsubscribeFromChannel,
 } from "../controllers/subUnsub.controller.js";
 
-import { upload } from "../middlewares/multer.middleware.js";
+import {
+  upload,
+  checkFileTypeAndSize,
+} from "../middlewares/multer.middleware.js";
 import { Protect, verifyJWT } from "../middlewares/auth.middleware.js";
+import { cleanupFilesOnError } from "../middlewares/cleanupFilesOnError.middleware.js";
 
 const router = Router();
 
@@ -39,13 +43,22 @@ router.route("/register").post(
       maxCount: 1,
     },
   ]),
-  registerUser
+  (req, res, next) => {
+    // Set avatarLocalfilePath and coverImgLocalPath in req for later use
+    req.avatarLocalfilePath = req.files["avatar"]
+      ? req.files["avatar"][0].path
+      : null;
+    req.coverImgLocalPath = req.files["coverImage"]
+      ? req.files["coverImage"][0].path
+      : null;
+    next();
+  },
+  checkFileTypeAndSize,
+  registerUser,
+  cleanupFilesOnError
 );
 
 router.route("/login").post(upload.none(), loginUser);
-
-// *********** secured routes with token ************ .---------------
-// video controller routes
 
 /// ********** users controller routes ******************
 router.route("/logout").get(verifyJWT, logoutUser);
@@ -55,12 +68,36 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/update-account-details")
   .patch(verifyJWT, upload.none(), updateAccountDetails);
-router
-  .route("/update-avatar")
-  .patch(verifyJWT, upload.single("avatar"), updateAvatar);
-router
-  .route("/update-cover-image")
-  .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
+router.route("/update-avatar").patch(
+  verifyJWT,
+  upload.single("avatar"),
+  (req, res, next) => {
+    req.avatarLocalfilePath =
+      req.file && req.file.fieldname === "avatar"
+        ? req.file.path // Wrap the file path in an object to maintain consistency
+        : null;
+    req.coverImgLocalPath = null;
+    next();
+  },
+  checkFileTypeAndSize,
+  updateAvatar,
+  cleanupFilesOnError
+);
+router.route("/update-cover-image").patch(
+  verifyJWT,
+  upload.single("coverImage"),
+  (req, res, next) => {
+    req.coverImgLocalPath =
+      req.file && req.file.fieldname === "coverImage"
+        ? req.file.path // Wrap the file path in an object to maintain consistency
+        : null;
+    req.avatarLocalfilePath = null;
+    next();
+  },
+  checkFileTypeAndSize,
+  updateCoverImage,
+  cleanupFilesOnError
+);
 router.route("/c/:username").get(getChannelProfile);
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
 router.route("/add-watch-history/:videoId").post(verifyJWT, addToWatchHistory);
@@ -75,13 +112,5 @@ router
 router
   .route("/get-channel-list/:subscriberId")
   .get(verifyJWT, getSubscribedChannels);
-// router
-//   .route("/unsubscribed/:channelUserName")
-//   .delete(verifyJWT, unsubscribeFromChannel);
-
-// ******* Play list routes *********
-
-// check protected route with session
-//router.route("/profile").get(Protect, checkUserProfile);
 
 export default router;

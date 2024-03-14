@@ -16,6 +16,13 @@ const commentSchema = new mongoose.Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    replies: [
+      // Array to store Reply objectIds
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Reply", // Reference the Reply model
+      },
+    ],
   },
   { timestamps: true }
 );

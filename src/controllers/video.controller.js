@@ -11,6 +11,7 @@ import {
 } from "../utils/cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import fs from "fs";
+import { Reply } from "../models/reply.model.js";
 //import { getAllComments } from "./comment.controller.js";
 
 const uploadVideo = asyncHandler(async (req, res) => {
@@ -531,20 +532,65 @@ const deleteVideo = asyncHandler(async (req, res) => {
         "Problem while delteing file from cloudinary, please try again"
       );
     }
-    //console.log("Video deletion response: ", deleteVideoResponse);
-    //console.log("Image deletion response: ", deleteImageResponse);
     // delte the video
     await Video.deleteOne({ _id: videoId, owner: userId });
 
     // Remove references to the deleted video from all playlists
-
     await Playlist.updateMany(
       { videos: videoId },
       { $pull: { videos: videoId } }
     );
 
+    // get all comments
+    const allComments = await Comment.find({ video: videoId });
+
     // Remove comments associated with the deleted video
-    await Comment.deleteMany({ video: videoId });
+    const deletedComments = await Comment.deleteMany({ video: videoId });
+    if (deletedComments.deletedCount > 0) {
+      // get ids of parent replies to main comment
+      const commentIdsForParentReplies = allComments.map(
+        (comment) => comment._id
+      );
+
+      // find data from above Ids from reply collection
+      const parentRepliesData = await Reply.find({
+        parentCommentId: { $in: commentIdsForParentReplies },
+      });
+
+      // get the ids of parent replies for child data
+      const parentIdsForChildData = parentRepliesData.map(
+        (parent) => parent._id
+      );
+      // delete parent replies
+      const deleteParentReplies = await Reply.deleteMany({
+        parentCommentId: { $in: commentIdsForParentReplies },
+      });
+      if (deleteParentReplies.deletedCount > 0) {
+        // delete likes associate with parent replies
+        await Like.deleteMany({ comment: { $in: commentIdsForParentReplies } });
+      }
+      if (parentIdsForChildData) {
+        // get the child replies data from parent replies Ids
+        const childRepliesLikeToDelete = await Reply.find({
+          parentReply: { $in: parentIdsForChildData },
+        });
+        // delete the child replies
+        const deleteChildData = await Reply.deleteMany({
+          parentReply: { $in: parentIdsForChildData },
+        });
+        if (deleteChildData.deletedCount > 0) {
+          //await Like.deleteMany({ comment: { $in: parentIdsForChildData } });
+          // get the ids of child replies
+          const replyIdsOfchildsToDeleteLike = childRepliesLikeToDelete.map(
+            (reply) => reply._id
+          );
+          // delete the likes associate with childs
+          await Like.deleteMany({
+            comment: { $in: replyIdsOfchildsToDeleteLike },
+          });
+        }
+      }
+    }
     //remove likes from like model associated with this video
     await Like.deleteMany({ video: videoId });
     // get refreshed collection of videos

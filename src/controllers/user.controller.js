@@ -14,7 +14,7 @@ import fs from "fs";
 // Global options for cookies
 const options = {
   httpOnly: true,
-  secure: false,
+  secure: true,
 };
 
 // access and refresh tokan into db
@@ -151,21 +151,6 @@ const registerUser = asyncHandler(async (req, res) => {
     console.log("Error in register user", error);
     throw new ApiErrorHandler(500, error?.message);
   }
-  // finally {
-  //   console.log("finall run", avatarLocalfilePath, coverImgLocalPath);
-  //   if (avatarLocalfilePath && fs.existsSync(avatarLocalfilePath)) {
-  //     fs.unlinkSync(avatarLocalfilePath);
-  //   }
-  //   if (coverImgLocalPath) {
-  //     fs.unlinkSync(coverImgLocalPath);
-  //   }
-  // }
-
-  // ---------------------------------------------- ///
-  // just for testing of api on postman
-  /*   res.status(200).json({
-    message: "Hello world ",
-  }); */
 });
 
 // login user
@@ -255,40 +240,86 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
       req.user._id,
       {
-        // use mongo db operator, and del the refresh token
         $unset: {
-          refreshToken: 1, // this removes the field from document
+          refreshToken: 1,
         },
-        // $set: {
-        //   refreshToken: undefined,
-        // },
       },
       {
-        // in this way we get new updated value instead of old , so refresh token wil be undefined
         new: true,
       }
     );
-    return res
-      .status(200)
-      .clearCookie("accessToken", options)
-      .clearCookie("refreshToken", options)
-      .json(new ApiResponce(201, {}, "Successfully logout😊"));
-  } else {
-    throw new ApiErrorHandler(401, "user not found in logout");
-  }
 
-  /*  req.session.destroy((err) => {
-    if (err) {
-      console.log("error in logout server: ", err);
-      throw new ApiErrorHandler(500, "Error in server");
+    // Clear JWT tokens from client-side storage if needed
+    // Example: localStorage.removeItem('accessToken');
+
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+        }
+        // Even if there's an error destroying the session, clear cookies
+        res.clearCookie("accessToken", options);
+        res.clearCookie("refreshToken", options);
+        res.status(200).json(new ApiResponce(201, {}, "Successfully logout😊"));
+      });
+    } else {
+      // If session doesn't exist, clear cookies and send response
+      res.clearCookie("accessToken", options);
+      res.clearCookie("refreshToken", options);
+      res.status(200).json(new ApiResponce(201, {}, "Successfully logout😊"));
     }
-    // clear the session cookie on client side
-    res.clearCookie("connect.sid");
-    return res
-      .status(200)
-      .json(new ApiResponce(200, null, "Logout Succesfully 😊"));
-  }); */
+  } else {
+    throw new ApiErrorHandler(401, "User not found during logout");
+  }
 });
+
+// const logoutUser = asyncHandler(async (req, res) => {
+//   if (req.user?._id) {
+//     await User.findByIdAndUpdate(
+//       req.user._id,
+//       {
+//         // use mongo db operator, and del the refresh token
+//         $unset: {
+//           refreshToken: 1, // this removes the field from document
+//         },
+//         // $set: {
+//         //   refreshToken: undefined,
+//         // },
+//       },
+//       {
+//         // in this way we get new updated value instead of old , so refresh token wil be undefined
+//         new: true,
+//       }
+//     );
+//     if (req.session) {
+//       req.session.destroy((err) => {
+//         if (err) {
+//           console.error("Error destroying session:", err);
+//          // res.status(500).json({ error: "Failed to logout" });
+//         }
+//       });
+//     }
+//     return res
+//       .status(200)
+//       .clearCookie("accessToken", options)
+//       .clearCookie("refreshToken", options)
+//       .json(new ApiResponce(201, {}, "Successfully logout😊"));
+//   } else {
+//     throw new ApiErrorHandler(401, "user not found in logout");
+//   }
+
+//   /*  req.session.destroy((err) => {
+//     if (err) {
+//       console.log("error in logout server: ", err);
+//       throw new ApiErrorHandler(500, "Error in server");
+//     }
+//     // clear the session cookie on client side
+//     res.clearCookie("connect.sid");
+//     return res
+//       .status(200)
+//       .json(new ApiResponce(200, null, "Logout Succesfully 😊"));
+//   }); */
+// });
 
 const getRefreshAccessToken = asyncHandler(async (req, res) => {
   // get token from user to provide again him access

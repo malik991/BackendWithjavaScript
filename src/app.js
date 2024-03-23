@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passportMiddleware from "./middlewares/passport.js";
 //import session from "express-session";
 
 const app = express();
@@ -31,6 +32,8 @@ app.use(express.static("public"));
 
 // crud operation on cookies scurly from just server side on the browser of client
 app.use(cookieParser());
+// pass the app to passportmiddleware to access app
+passportMiddleware(app); // to use t as a middleware
 
 // all middlware will import first than get router
 // router imports
@@ -42,6 +45,7 @@ import likeRouter from "./routes/like.router.js";
 import tweetRouter from "./routes/tweet.router.js";
 import dashboardRouter from "./routes/dashboard.router.js";
 import healthCheckRouter from "./routes/healthCheck.router.js";
+import authRouter from "./routes/auth.route.js";
 import { ApiErrorHandler } from "./utils/ApiErrorHandler.js";
 
 // routes declration , now we use middleware instead of app.get/post , coz we declrae our router separatly
@@ -53,6 +57,7 @@ app.use("/api/v1/like", likeRouter);
 app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/healthCheck", healthCheckRouter);
+app.use("/api/v1/oauth", authRouter);
 
 //http://localhost:8000/api/v1/users/register or login
 

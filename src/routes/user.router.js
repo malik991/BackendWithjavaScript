@@ -30,6 +30,20 @@ import { cleanupFilesOnError } from "../middlewares/cleanupFilesOnError.middlewa
 
 const router = Router();
 
+// Route for Google OAuth login
+//router.get("/auth/google", );
+// router.get(
+//   "/auth/google",
+//   passport.authenticate("google", { scope: ["profile", "email"] })
+// );
+// Callback route for Google OAuth login
+// router.get("/auth/google/callback", (req, res, next) => {
+//   console.log("successfull call back");
+// Handle the Google OAuth callback
+// This route should be defined in your Google Developer Console as the redirect URI
+// After successful authentication, Google will redirect to this endpoint with the authentication data
+// });
+
 // here we will define get , post related to user
 router.route("/register").post(
   // add our middleware here "multer" for uploading file

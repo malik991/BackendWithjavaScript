@@ -109,13 +109,33 @@ router.get(
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
+router.get(
+  "/github",
+  passport.authenticate("github", { scope: ["profile", "email"] })
+);
+
+router.get(
+  "/github/callback",
+  passport.authenticate("github", {
+    successRedirect: process.env.CLIENT_URL,
+    failureRedirect: `${process.env.CLIENT_URL}/login/failed`,
+  })
+);
+
 // register or login user to DB
 router.get("/login/success", async (req, res) => {
   if (req.user) {
     try {
-      let userExist = await User.findOne({
-        email: req?.user?._json.email,
-      });
+      let userExist;
+      if (req?.user?._json?.login) {
+        userExist = await User.findOne({
+          userName: req?.user.username,
+        });
+      } else {
+        userExist = await User.findOne({
+          email: req?.user?._json.email,
+        });
+      }
       if (userExist) {
         //console.log("user exist: ", userExist?._id);
         const { accessToken, refreshToken } =
@@ -149,19 +169,36 @@ router.get("/login/success", async (req, res) => {
           );
       }
       let modifiedNewUserCreated;
-      const newUser = await User.create({
-        userName:
-          req.user._json.family_name.toLowerCase() +
-          " " +
-          req?.user?._json.given_name.toLowerCase(),
-        email: req?.user?._json.email,
-        password: Date.now(), //dummy password
-        fullName: req?.user?._json.name,
-        avatar: req?.user?._json.picture,
-        coverImage: "",
-        avatarPublicId: "",
-        coverImagePublicId: "",
-      });
+      let newUser;
+      if (req?.user?._json?.login) {
+        // for github
+        //console.log("user: ", req.user.username);
+        newUser = await User.create({
+          userName: req.user.username,
+          email: req?.user?._json?.email || "pleasechange@test.com",
+          password: Date.now(), //dummy password
+          fullName: req?.user?.displayName,
+          avatar: req?.user?._json.avatar_url,
+          coverImage: "",
+          avatarPublicId: "",
+          coverImagePublicId: "",
+        });
+      } else {
+        newUser = await User.create({
+          userName:
+            req.user._json.family_name.toLowerCase() +
+            " " +
+            req?.user?._json.given_name.toLowerCase(),
+          email: req?.user?._json.email,
+          password: Date.now(), //dummy password
+          fullName: req?.user?._json.name,
+          avatar: req?.user?._json.picture,
+          coverImage: "",
+          avatarPublicId: "",
+          coverImagePublicId: "",
+        });
+      }
+
       if (newUser) {
         const { accessToken, refreshToken } =
           await generateAccessAndRefreshToken(newUser?._id);

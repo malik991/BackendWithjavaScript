@@ -1,7 +1,7 @@
 import "dotenv/config";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { User } from "../models/user.model.js";
+import { Strategy as GithubStrategy } from "passport-github2";
 import session from "express-session";
 import { ApiErrorHandler } from "../utils/ApiErrorHandler.js";
 
@@ -29,8 +29,22 @@ const passportMiddleware = (app) => {
         userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
       },
       async (accessToken, refreshToken, profile, callback) => {
-        //console.log("profile: ", profile.displayName);
+        //console.log("profile: ", profile);
         return callback(null, profile);
+      }
+    )
+  );
+
+  passport.use(
+    new GithubStrategy(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: "http://localhost:8000/api/v1/oauth/github/callback",
+      },
+      function (accessToken, refreshToken, profile, done) {
+        //console.log("profile: ", profile);
+        done(null, profile);
       }
     )
   );

@@ -18,9 +18,9 @@ const limits = {
   fileSize: {
     // Limit for image files (in bytes)
     //image: 2 * 1024 * 1024, // 2 MB,
-    avatar: 50 * 1024, // 50kb
-    coverImage: 50 * 1024,
-    thumbNail: 50 * 1024,
+    avatar: 200 * 1024, // 50kb
+    coverImage: 200 * 1024,
+    thumbNail: 200 * 1024,
     // Limit for video files (in bytes)
     video: 1 * 1024 * 1024, // 1 MB
     //video: 20 * 1024 * 1024, // 20 MB
@@ -64,7 +64,7 @@ export const checkFileTypeAndSize = (req, res, next) => {
       if (avatarFile.size > limits.fileSize.avatar) {
         throw new ApiErrorHandler(
           400,
-          "Avatar file size exceeds the limit (2MB)"
+          "Avatar file size exceeds the limit (199KB)"
         );
       }
     }
@@ -78,7 +78,7 @@ export const checkFileTypeAndSize = (req, res, next) => {
       if (coverImageFile.size > limits.fileSize.coverImage) {
         throw new ApiErrorHandler(
           400,
-          "CoverImage file size exceeds the limit (2MB)"
+          "CoverImage file size exceeds the limit (199KB)"
         );
       }
     }
@@ -92,7 +92,7 @@ export const checkFileTypeAndSize = (req, res, next) => {
       if (thumbNailFile.size > limits.fileSize.thumbNail) {
         throw new ApiErrorHandler(
           400,
-          "ThumbNail file size exceeds the limit (2MB)"
+          "ThumbNail file size exceeds the limit (199kB)"
         );
       }
     }
@@ -106,7 +106,7 @@ export const checkFileTypeAndSize = (req, res, next) => {
       if (uploadVideoFile.size > limits.fileSize.video) {
         throw new ApiErrorHandler(
           400,
-          "video file size exceeds the limit (2MB)"
+          "video file size exceeds the limit (1MB)"
         );
       }
     }

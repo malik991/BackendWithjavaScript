@@ -4,8 +4,11 @@
   "description": "backend with javascript",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": "14.x"
+  },
   "scripts": {
-    "start": "nodemon dotenv/config src/index.js"
+    "start": "node dotenv/config src/index.js"
   },
   "keywords": [
     "javascript",
